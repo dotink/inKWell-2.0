@@ -18,7 +18,6 @@
 
 	class Config
 	{
-		const DEFAULT_ROOT   = 'config';
 		const DEFAULT_CONFIG = 'default';
 
 		const CONFIG_BY_TYPES_ELEMENT = '__TYPES__';
@@ -26,9 +25,16 @@
 		/**
 		 * The cache file for the config
 		 *
+		 *
 		 */
 		private $cacheFile = NULL;
 
+
+		/**
+		 *
+		 *
+		 */
+		private $configPath = NULL;
 
 		/**
 		 * The configuration data
@@ -37,6 +43,11 @@
 		 * @var array
 		 */
 		private $data = array();
+
+		/**
+		 *
+		 */
+		private $name = NULL;
 
 
 		/**
@@ -61,37 +72,97 @@
 
 
 		/**
+		 * Construct a configuration object
+		 *
+		 * This does not inherently build the configuration.
+		 */
+		public function __construct($name = NULL)
+		{
+			$this->name = $name ?: self::DEFAULT_CONFIG;
+		}
+
+
+		/**
+		 * Build the configuration
+		 *
+		 * This will attempt to use a cached copy of the configuration if it exists.  If it does
+		 * not exist or is invalid, it will build from the provided directory.  To clear the
+		 * cached version, please see the reset() method.
+		 *
+		 * @access public
 		 *
 		 */
-		static private function build($directory = NULL, $depth = 0)
+		public function build($directory = NULL, $depth = 0)
 		{
+			if ($depth == 0) {
+
+				$directory = rtrim($directory, '/\\' . DS);
+				$directory = str_replace('/', DS, $directory);
+
+				if (!preg_match(REGEX_ABSOLUTE_PATH, $directory)) {
+					throw new Flourish\ProgrammerException(
+						'Cannot build config "%s" from "%s", must be an absolute path',
+						$this->name,
+						$directory
+					);
+				}
+
+				$this->cacheFile  = $directory . DS . '.' . $this->name;
+				$this->configPath = $directory . DS . $this->name;
+
+				if (is_readable($this->cacheFile) && ($data = @unserialize($this->cacheFile))) {
+					$this->data = $data;
+
+					//
+					// We want to return almost immediately if we got good data from our cache
+					//
+
+					return $this;
+				}
+
+				$this->data = [self::CONFIG_BY_TYPES_ELEMENT => []];
+				$directory  = $this->configPath;
+			}
+
  			if (!is_readable($directory)) {
-				throw new Exception(sprintf(
+				throw new Flourish\ProgrammerException(
 					'Cannot build configuration, directory "%s" is not readable.',
 					$directory
-				));
+				);
  			}
 
- 			$config          =  array(self::CONFIG_BY_TYPES_ELEMENT => array());
- 			$configs_by_type =& $config[self::CONFIG_BY_TYPES_ELEMENT];
+ 			$types_ref =& $this->data[self::CONFIG_BY_TYPES_ELEMENT];
 
 			//
 			// Loads each PHP file into a configuration element named after the file.
 			//
 
 			foreach (glob($directory . DS . '*.php') as $config_file) {
-				$element          = array_slice(explode(DS, $config_file), ($depth + 1) * -1);
-				$element          = str_replace('.php', '', implode('/', $element));
-				$element          = strtolower($element);
-				$current_config   = include($config_file);
-				$config[$element] = $current_config['data'];
 
-				foreach ($current_config['types'] as $type) {
-					if (!isset($configs_by_type[$type])) {
-						$configs_by_type[$type] = array();
+				//
+				// Our element name is determined by the terminating path segments
+				// relative to the depth, without the '.php' extension and completely
+				// lowercased.  Underscores are recommended as good word separators.
+				//
+
+				$element = array_slice(explode(DS, $config_file), ($depth + 1) * -1);
+				$element = str_replace('.php', '', implode('/', $element));
+				$element = strtolower($element);
+				$current = include($config_file);
+
+				//
+				// We actually get our elements by accepting the return of the include.  If
+				// there is a problem with the syntax, it should throw a normal syntax error.
+				//
+
+				$this->data[$element] = $current['data'];
+
+				foreach ($current['types'] as $type) {
+					if (!isset($types_ref[$type])) {
+						$types_ref[$type] = array();
 					}
 
-					$configs_by_type[$type][$element] =& $config[$element];
+					$types_ref[$type][$element] =& $this->data[$element];
 				}
 			}
 
@@ -100,44 +171,34 @@
 			//
 
 			foreach (glob($directory . DS . '*', GLOB_ONLYDIR) as $directory) {
-				$depth  = $depth + 1;
-				$config = array_merge_recursive($config, self::build($directory, $depth));
+				$this->build($directory, $depth + 1);
 			}
 
-			return $config;
-		}
+			//
+			// Lastly, if this configuration name is not the default, merge it with it.
+			//
+			if ($depth == 0 && $this->name !== self::DEFAULT_CONFIG) {
+				try {
+					$root_directory = dirname($this->configPath);
+					$default_config = new Config(self::DEFAULT_CONFIG);
+					$this->data     = array_replace_recursive(
+						$default_config->build($root_directory)->data,
+						$this->data
+					);
 
-		/**
-		 * Construct a configuration object
-		 *
-		 */
-		public function __construct($app, $directory = NULL)
-		{
-			$default_directory = implode(DS, [self::DEFAULT_ROOT, self::DEFAULT_CONFIG]);
-			$default_directory = implode(DS, [$app->getRoot(), $default_directory]);
-			$default_directory = str_replace('/', DS, $default_directory);
+				} catch (Flourish\Exception $e){
 
-			if (!$directory) {
-				$directory = $default_directory;
-			} elseif (!preg_match(REGEX_ABSOLUTE_PATH, $directory)) {
-				$directory = implode(DS, [$app->getRoot(), $directory]);
-			}
+					//
+					// If we cannot merge the default data, we'll have to assume the non-default
+					// is complete.
+					//
 
-			$directory       = str_replace('/', DS, $directory);
-			$config_name     = pathinfo($directory, PATHINFO_BASENAME);
-			$this->cacheFile = dirname($directory) . DS . '.' . $config_name;
-
-			if (is_readable($this->cacheFile) && ($data = @unserialize($this->cacheFile))) {
-				$this->data = $data;
-			} else {
-				$this->data = self::build($directory);
-
-				if ($directory != $default_directory) {
-					$default    = new self($app);
-					$this->data = array_replace_recursive($this->data, $default->data);
 				}
 			}
+
+			return $this;
 		}
+
 
 		/**
 		 * Gets a configuration element.
@@ -192,6 +253,7 @@
 
 			return $config;
 		}
+
 
 		/**
 		 * Writes the configuration out to a cache file

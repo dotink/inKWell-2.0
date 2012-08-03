@@ -19,16 +19,18 @@
 
 	class IW implements \ArrayAccess
 	{
-		const LB                      = PHP_EOL;
-		const DS                      = DIRECTORY_SEPARATOR;
+		const LB                       = PHP_EOL;
+		const DS                       = DIRECTORY_SEPARATOR;
 
-		const INITIALIZATION_METHOD   = '__init';
-		const MATCH_CLASS_METHOD      = '__match';
+		const INITIALIZATION_METHOD    = '__init';
+		const MATCH_CLASS_METHOD       = '__match';
 
-		const DEFAULT_WRITE_DIRECTORY = 'assets';
-		const DEFAULT_EXECUTION_MODE  = 'development';
+		const DEFAULT_CONFIG_DIRECTORY = 'config';
+		const DEFAULT_WRITE_DIRECTORY  = 'assets';
+		const DEFAULT_EXECUTION_MODE   = 'development';
 
-		const REGEX_ABSOLUTE_PATH     = '#^(/|\\\\|[a-z]:(\\\\|/)|\\\\|//)#i';
+		const REGEX_ABSOLUTE_PATH      = '#^(/|\\\\|[a-z]:(\\\\|/)|\\\\|//)#i';
+
 
 
 		/**
@@ -82,10 +84,10 @@
 		 * @static
 		 * @access public
 		 * @param string $root_directory The root directory for the application
-		 * @param string $config_directory The configuration directory for the application
+		 * @param Callable $config_callback The configuration callback
 		 * @return IW A new instance of an inKWell application
 		 */
-		static public function init($root_directory, $config_directory = NULL)
+		static public function init($root_directory, Callable $config_callback)
 		{
 			//
 			// Add some basic definitions
@@ -103,7 +105,17 @@
 				define('REGEX_ABSOLUTE_PATH', self::REGEX_ABSOLUTE_PATH);
 			}
 
-			$app    = new self($root_directory, $config_directory);
+			$app = new self($root_directory, $config_callback);
+
+			if (!isset($app['config'])) {
+
+				//
+				// Return our application immediately if there is no config
+				//
+
+				return $app;
+			}
+
 			$config = $app['config']->get('array', 'inkwell');
 
 			//
@@ -224,16 +236,17 @@
 		 *
 		 * @access private
 		 * @param string $root_directory The root directory for the application
-		 * @param string $config_directory The configuration directory for the application
+		 * @param Callable $config_callback The configuration callback
 		 * @return void
 		 */
-		private function __construct($root_directory, $config_directory = NULL)
+		private function __construct($root_directory, Callable $config_callback = NULL)
 		{
 			//
 			// Set our application root
 			//
 
-			$this->setRoot(NULL, $root_directory);
+			$this->setRoot(NULL,     $root_directory);
+			$this->setRoot('config', $root_directory . DS . self::DEFAULT_CONFIG_DIRECTORY);
 
 			//
 			// Our initial loader map is established.  This will use compatibility transformations,
@@ -249,18 +262,21 @@
 			$this->registerLoaderStandard('IW',   [__CLASS__, 'transformClassToIW']);
 
 			//
-			// Create our core children
+			// Get our config from our callback
 			//
 
-			$this->children['config']  = new Config($this, $config_directory);
-			$this->children['routes']  = new Router($this);
-			$this->children['request'] = new Request($this);
+			if ($config_callback) {
+				$this->children['config'] = call_user_func($config_callback, $this);
 
-			//
-			// Replace our default autoloader map with whatever is configured
-			//
+				//
+				// Merge in additional autoloaders
+				//
 
-			$this->loaders = $this['config']->get('array', 'autoloaders');
+				$this->loaders = array_merge(
+					$this->loaders,
+					$this['config']->get('array', 'autoloaders')
+				);
+			}
 		}
 
 
@@ -487,6 +503,26 @@
 		public function registerLoaderStandard($standard, Callable $transform_callback)
 		{
 			$this->loaderStandards[strtolower($standard)] = $transform_callback;
+		}
+
+		/**
+		 * Runs the Application with a provided Router and Request
+		 *
+		 * @access public
+		 * @param Routes $routes
+		 * @param Request $request
+		 * @return integer The return value
+		 */
+		public function run($routes, $request)
+		{
+			foreach ($this['config']->get('array', 'routes') as $route => $target) {
+				$routes->any[$route] = $target;
+			}
+
+			$this->children['routes']  = $routes;
+			$this->children['request'] = $request;
+
+			return $this['routes']->run($this['request']);
 		}
 
 		/**

@@ -1,5 +1,7 @@
 <?php
 
+	namespace Dotink\Inkwell;
+
 	try {
 
 		call_user_func(function() {
@@ -35,14 +37,15 @@
 			// Boostrap!
 			//
 
-			if (!is_readable($include_directory . DIRECTORY_SEPARATOR . 'init.php')) {
-				throw new Exception('Unable to include inititialization file.');
+			if (!is_readable($init = $include_directory . DIRECTORY_SEPARATOR . 'init.php')) {
+				throw new \Exception('Unable to include inititialization file.');
 			}
 
-			$application = include($inclue_directory . DIRECTORY_SEPARATOR . 'init.php');
-			$exit_code   = $application->run();
+			$app      = include($init);
+			$response = $app->run(new Routes(), new Request());
+			$return   = Response::resolve($response)->send();
 
-			exit($exit_code);
+			exit($return);
 		});
 
 	} catch (Exception $e) {
