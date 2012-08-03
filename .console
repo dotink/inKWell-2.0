@@ -147,6 +147,13 @@
 
 	if (!$___silent) {
 		echo PHP_EOL;
+		echo '       .__        ____  __.__      __       .__  .__   ' . PHP_EOL;
+		echo '       |__| ____ |    |/ _/  \    /  \ ____ |  | |  |  ' . PHP_EOL;
+		echo '       |  |/    \|      < \   \/\/   // __ \|  | |  |  ' . PHP_EOL;
+		echo '       |  |   |  \    |  \ \        /\  ___/|  |_|  |__' . PHP_EOL;
+		echo '       |__|___|  /____|__ \ \__/\  /  \___  >____/____/' . PHP_EOL;
+		echo '               \/        \/      \/       \/           ' . PHP_EOL;
+		echo PHP_EOL;
 		echo 'Welcome to the inKWell Console, you can begin typing PHP or try:';
 		echo PHP_EOL;
 	}
