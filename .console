@@ -1,0 +1,651 @@
+<?php
+
+	use Dotink\Inkwell;
+	use Dotink\Flourish;
+
+	//
+	// We want to ensure that if we run as root that we take on the groupid
+	// and userid of our files.  This allows scaffolded files and written files
+	// to maintain proper user and grou permissions.
+	//
+
+	if (function_exists('posix_setgid')) {
+		@posix_setgid(filegroup(__FILE__));
+	}
+
+	if (function_exists('posix_setuid')) {
+		@posix_setuid(fileowner(__FILE__));
+	}
+
+	//
+	// Set up our APPLICATION_ROOT, the console is always assumed to run in directly in it.
+	//
+
+	define('APPLICATION_ROOT', realpath(dirname(__FILE__)));
+
+	//
+	// Set up our default pseudo $_SERVER parameters
+	//
+	$_SERVER['DOCUMENT_ROOT']   = dirname(__FILE__);
+	$_SERVER['REQUEST_URI']     = '/';
+	$_SERVER['REMOTE_ADDR']     = '127.0.0.1';
+	$_SERVER['SERVER_NAME']     = 'localhost';
+	$_SERVER['SERVER_PROTOCOL'] = 'HTTP/1.1';
+	$_SERVER['REQUEST_METHOD']  = 'GET';
+
+	//
+	// And these guys.
+	//
+
+	$_GET  = array();
+	$_POST = array();
+
+	//
+	// Bootstrap inKWell.
+	//
+
+	$app = require implode(DIRECTORY_SEPARATOR, ['.', 'includes', 'init.php']);
+
+	//
+	// Set some basics regardless of configuration
+	//
+
+	Flourish\Core::enableErrorHandling('html');
+	Flourish\Core::enableExceptionHandling('html');
+
+	$___php = isset($_ENV['IW_PHP_CMD'])
+		? $_ENV['IW_PHP_CMD']
+		: 'php';
+
+	@exec($___php . ' -v', $___garbage, $___error);
+
+	if ($___error) {
+		echo PHP_EOL;
+		echo 'Please add the PHP executable to your path.';
+		echo PHP_EOL;
+		exit();
+	}
+
+	$___shell_args = array();
+	$___settings   = array(
+		'short_open_tag'  => '0',
+		'asp_tags'        => '1',
+		'error_reporting' => 'E_PARSE'
+	);
+
+	foreach ($___settings as $___setting => $___value) {
+		$___shell_args[] = '-d ' . escapeshellarg($___setting . '=' . $___value);
+	}
+
+	$___php .= implode(' ', $___shell_args);
+
+	if (isset($argv[1]) && trim($argv[1])) {
+		if (is_file($argv[1]) && is_readable($argv[1])) {
+			try {
+				include $argv[1];
+				exit(0);
+			} catch (Exception $e) {
+				echo 'Exception: ' . $e->getMessage();
+				exit(1);
+			}
+		} else {
+			$___request = explode('::', $argv[1], 2);
+
+			$_SERVER['REQUEST_URI'] = $___request[0];
+
+			if (count($___request) == 2) {
+				$_SERVER['REQUEST_METHOD'] = strtoupper($___request[0]);
+				$_SERVER['REQUEST_URI']    = $___request[1];
+			}
+
+			if (isset($argv[2])) {
+				$_SERVER['HTTP_ACCEPT'] = $argv[2];
+			} else {
+				$_SERVER['HTTP_ACCEPT'] = '*/*';
+			}
+
+			if (isset($argv[3])) {
+				if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+					$_GET  = fJSON::decode($argv[3], TRUE);
+				} else {
+					$_POST = fJSON::decode($argv[3], TRUE);
+				}
+			}
+
+			require implode(DS, array(
+				APPLICATION_ROOT,
+				'includes',
+				'routing.php'
+			));
+
+			Response::resolve(Moor::run())->send();
+
+			exit(0);
+		}
+	}
+
+	register_shutdown_function('___respawn');
+
+	$___dbconf    = $app['config']->get('array', 'databases');
+	$___stdin     = fopen('php://stdin', 'r');
+	$___stat      = fstat($___stdin);
+	$___depth     = 0;
+	$___code      = '\?';
+	$___line      = 1;
+	$___command   = '';
+	$___silent    = FALSE;
+
+	if (isset($___dbconf['disabled']) && !$___dbconf['disabled']) {
+		$___database  = ___use_db('default');
+	}
+
+	if (($___stat['mode'] & 0170000) !== 0020000) {
+		$___silent      = TRUE;
+		$___called_quit = TRUE;
+		$___code        = NULL;
+	}
+
+	if (!$___silent) {
+		echo PHP_EOL;
+		echo 'Welcome to the inKWell Console, you can begin typing PHP or try:';
+		echo PHP_EOL;
+	}
+
+	do {
+		if (($___code = trim($___code)) && $___code[0] == '\\') {
+
+			//
+			// Handle escaped console commands
+			//
+
+			$___command = $___code;
+			$___code    = NULL;
+
+			switch (substr($___command, 0, 2)) {
+				case '\q':
+					$___called_quit = TRUE;
+
+				case '\r':
+					exit();
+
+				case '\m':
+					echo PHP_EOL;
+
+					if (!Flourish\Core::checkOS('windows')) {
+						echo 'Entering non-interactive mode, press <ctrl>+D when done.' . PHP_EOL;
+					} else {
+						echo 'Entering non-interactive mode, press <ctrl>+Z when done.' . PHP_EOL;
+					}
+
+					echo PHP_EOL;
+
+					$___silent      = TRUE;
+					$___called_quit = TRUE;
+
+					while ($___mline = fgets($___stdin)) {
+						$___code = $___code . $___mline;
+					}
+
+					echo PHP_EOL;
+					echo 'Output:' . PHP_EOL;
+					echo PHP_EOL;
+					break;
+
+				case '\e':
+					if (!($___exec = trim(substr($___command, 2)))) {
+						echo 'Please enter a Command: ';
+						$___exec = trim(fgets($___stdin));
+					}
+					passthru($___exec);
+					break;
+
+				case '\c':
+					___clear_screen();
+					break;
+
+				case '\s':
+					if (!($___sql = trim(substr($___command, 2)))) {
+						echo 'Please enter your SQL: ';
+						$___sql = trim(fgets($___stdin));
+					}
+					___run_query($___database, $___sql);
+					break;
+
+				case '\u':
+					if (!($___db_select = trim(substr($___command, 2)))) {
+						echo 'Enter the database name: ';
+						$___db_name = trim(fgets($___stdin));
+						echo 'Enter a role (read, write, [either]): ';
+						$___db_role = trim(fgets($___stdin));
+						if (!$___db_role) {
+							$___db_role = 'either';
+						}
+					} else {
+						$___db_select = explode(' ', $___db_select);
+						$___db_name   = isset($___db_select[0])
+							? $___db_select[0]
+							: 'default';
+						$___db_role   = isset($___db_select[1])
+							? $___db_select[1]
+							: 'either';
+					}
+					$___database = ___use_db($___db_name, $___db_role);
+					break;
+
+				case '\>':
+					if (!($___directory = trim(substr($___command, 2)))) {
+						echo 'Please enter a Directory: ';
+						$___directory = trim(fgets($___stdin));
+					}
+					chdir(trim($___directory, '\'"'));
+					break;
+
+				case '\?':
+					echo PHP_EOL;
+					echo '\c - Clear the Screen'             . PHP_EOL;
+					echo '\e - Execute a System Command'     . PHP_EOL;
+					echo '\m - Enter Non-Interactive mode'   . PHP_EOL;
+					echo '\q - Quit the Program'             . PHP_EOL;
+					echo '\r - Reset the Program'            . PHP_EOL;
+
+					if ($___dbconf['disabled'] === FALSE) {
+						echo '\s - Run SQL Statement'    . PHP_EOL;
+						echo '\u - Select Database'      . PHP_EOL;
+					}
+
+					echo '\> - Change Directory'             . PHP_EOL;
+					echo '\? - Display this Message'         . PHP_EOL;
+					echo PHP_EOL;
+					break;
+			}
+
+			$___command = NULL;
+		}
+
+
+		if ($___code) {
+
+			$___prev_depth = $___depth;
+
+			foreach (token_get_all('<?php ' . $___code) as $___token) {
+				if (!is_array($___token)) {
+					switch ($___token) {
+						case '{':
+						case '(':
+							$___depth++;
+							break;
+						case '}':
+						case ')':
+							$___depth--;
+							break;
+					}
+				}
+			}
+
+			$___command  .= $___code . PHP_EOL;
+
+			if ($___depth <= 0) {
+
+				if ($___command && ___check($___command)) {
+
+					ob_start();
+					Flourish\Core::startErrorCapture();
+
+					try {
+						eval($___command);
+					} catch (Exception $___e) {
+						echo 'Exception:  ' . $___e->getMessage();
+					}
+
+					$___output  = ob_get_clean();
+
+					if(is_array($errors = Flourish\Core::stopErrorCapture())) {
+						foreach ($errors as $error) {
+							echo $error['type'] . ':  ' . $error['string'] . PHP_EOL;
+						}
+					}
+
+					if($___output) {
+						echo $___output;
+						if (!$___silent) {
+							echo PHP_EOL;
+						}
+					}
+				}
+
+				$___depth   = 0;
+				$___line    = 0;
+				$___command = NULL;
+			}
+
+			$___line++;
+		}
+
+		if (!$___silent) {
+			echo '[' . getcwd() . '][' . sprintf('%02s', $___line) . ']# ';
+			flush();
+		}
+
+	} while(($___code = ___readline($___stdin)));
+
+	/**
+	 * A simple readline wrapper that allows us to get the user input via
+	 * various methods.
+	 *
+	 * @param resource $handler A file pointer to the input
+	 * @return string The user entered string
+	 */
+	function ___readline($handler)
+	{
+		return fgets($handler);
+	}
+
+	/**
+	 * Register as a shutdown function to ensure that any fatal errors or
+	 * uncaught exceptions do not terminate the shell.  This function
+	 * will cause it to respawn itself on shutdown.  The only downside is
+	 * that all previous variables and information are lost.
+	 *
+	 * @param void
+	 * @return void
+	 */
+	function ___respawn()
+	{
+		echo ob_get_clean() . "\n";
+
+		if (!isset($GLOBALS['___called_quit'])) {
+			echo "Resetting...\n";
+			passthru(implode(' ', array(
+				'php -q',
+					'-d register_globals=0',
+					'-d magic_quotes_gpc=0',
+					'-d short_open_tag=0',
+					'-d asp_tags=1',
+					'-d display_errors=1',
+					escapeshellarg(__FILE__)
+			)));
+		}
+	}
+
+	/**
+	 * Checks syntax of a file and outputs where the errors are.
+	 *
+	 * @param string $file The file to check
+	 * @return boolean TRUE if no errors exist, FALSE otherwise
+	 */
+	function ___verify($file)
+	{
+		if (Flourish\Core::checkOS('windows')) {
+			$syntax_check = trim(shell_exec(sprintf(
+				$GLOBALS['___php'] . ' -l %s',
+				escapeshellarg($file)
+			)));
+		} else {
+			ob_start();
+
+			passthru(sprintf(
+				$GLOBALS['___php'] . ' -l %s 2>&1',
+				escapeshellarg($file)
+			), $return);
+
+			$syntax_check = trim(ob_get_clean());
+		}
+
+		list($syntax_check) = preg_split('/[\r\n]+/', $syntax_check);
+
+		if (stripos($syntax_check, 'Parse error') !== FALSE) {
+			echo str_replace($file, 'parsed input', $syntax_check);
+			echo PHP_EOL;
+			return FALSE;
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Check validity of chunks of PHP source code based on advanced alien
+	 * token logic stolen from the mothership by uploading a virus to their
+	 * puter with a piece of fruit.
+	 *
+	 * @param string $string A string of PHP source code without an open tag
+	 * @return boolean TRUE if code appears valid, FALSE otherwise
+	 */
+	function ___check($source)
+	{
+		$source        = '<?php ' . trim($source);
+		$file          = APPLICATION_ROOT . '/.console.command';
+		$current_class = NULL;
+
+		file_put_contents($file, $source);
+
+		if (!___verify($file)) {
+			return FALSE;
+		}
+
+		foreach (($tokens = token_get_all($source)) as $i => $token) {
+
+			if (is_array($token)) {
+
+				if (
+					   $token[0] == T_INCLUDE
+					|| $token[0] == T_INCLUDE_ONCE
+					|| $token[0] == T_REQUIRE
+					|| $token[0] == T_REQUIRE_ONCE
+				) {
+
+					$collect = '';
+
+					$c = 1;
+
+					do {
+						$next_token = is_array($tokens[$i + $c])
+							? $tokens[$i + $c][1]
+							: $tokens[$i + $c];
+
+						$collect .= $next_token;
+						$c++;
+
+					} while($next_token !== ';');
+
+					$included_file = trim($collect, '() ;"\'');
+
+					if (!is_readable($included_file)) {
+						echo sprintf(
+							'Error: The file "%s" could not be read',
+							$included_file
+						) . PHP_EOL;
+						return FALSE;
+					} else {
+						ob_start();
+
+						if (!___check('?>' . file_get_contents($included_file))) {
+							echo sprintf(
+								'Included/Required File [%s] %s',
+								$file,
+								ob_get_clean()
+							);
+						} else {
+							ob_get_flush();
+						}
+
+						return FALSE;
+					}
+
+				} elseif ($token[0] == T_STRING) {
+
+					$t      = $token[1];
+					$method = NULL;
+
+					//
+					// Find the next non-whitespace token, and if it's not an ( or an {
+					// continue on.
+					//
+					$c = 1;
+
+					do {
+						$next_token = is_array($tokens[$i + $c])
+							? $tokens[$i + $c][0]
+							: $tokens[$i + $c];
+
+						$c++;
+					} while ($next_token == T_WHITESPACE);
+
+					//
+					// Next non-whitespace token was ( or { so now let's see what the previous
+					// non-whitespace token was.
+					//
+					$c = 1;
+
+					do {
+						$previous_token = is_array($tokens[$i - $c])
+							? $tokens[$i - $c][0]
+							: $tokens[$i - $c];
+
+						$c++;
+					} while($previous_token == T_WHITESPACE);
+
+					if ($next_token == '(') {
+
+						switch ($previous_token) {
+
+							case T_FUNCTION:
+							case T_OBJECT_OPERATOR:
+								//
+								// Safe cases
+								//
+								break;
+
+							case T_PAAMAYIM_NEKUDOTAYIM:
+
+								$t      = $tokens[$i - 2][1];
+								$method = $token[1];
+
+							case T_NEW:
+
+								if (in_array($t, array('self', 'static', 'parent'))) {
+									continue;
+								} elseif (!class_exists($t)) {
+									echo sprintf(
+										'Error: Class %s does not exist.',
+										$t
+									) . PHP_EOL;
+									return FALSE;
+								} elseif (!isset($method)) {
+									//
+									// No method set, so we're trying to instantiate.
+									//
+									$reflection = new ReflectionClass($t);
+									if (!$reflection->isInstantiable()) {
+										echo sprintf(
+											'Error: Cannot create %s, invalid or ' .
+											'non-public constructor.',
+											$t
+										) . PHP_EOL;
+										return FALSE;
+									}
+								} else {
+									//
+									// Method was set, so it's a static call
+									//
+									if(!method_exists($t, $method)) {
+										echo sprintf(
+											'Error: Method %s::%s does not exist.',
+											$t,
+											$method
+										) . PHP_EOL;
+										return FALSE;
+									} elseif (!is_callable(array($t, $method))) {
+										echo sprintf(
+											'Error: Method %s::%s is not callable.',
+											$t,
+											$method
+										) . PHP_EOL;
+										return FALSE;
+									}
+
+									$method = NULL;
+								}
+
+								break;
+
+							default:
+
+								if (!function_exists($t)) {
+									echo sprintf(
+										'Error:  Function %s() does not exist.',
+										$t
+									) . PHP_EOL;
+									return FALSE;
+								}
+								break;
+						}
+					}
+				}
+			}
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Runs an SQL query on a provided database.  The function will dump
+	 * the rows returned in the result using Flourish\Core::expose();
+	 *
+	 * @param fDatabase $db The database object to run the query on
+	 * @param string $sql The query to run
+	 * @return void
+	 */
+	function ___run_query($db, $sql)
+	{
+		if (!($db instanceof fDatabase)) {
+			echo PHP_EOL;
+			echo 'Cannot run SQL query, database inaccessible'      . PHP_EOL;
+			echo '  - Check your current configuration '            . PHP_EOL;
+			echo '  - Select a different database using:'           . PHP_EOL;
+			echo                                                      PHP_EOL;
+			echo '   \u <database_name> [<database_role> = either]' . PHP_EOL;
+			echo PHP_EOL;
+		} else {
+			try {
+				$result = $db->query($sql);
+				foreach($result as $record) {
+					Flourish\Core::expose($record);
+				}
+			} catch (Exception $e) {
+				echo 'Exception: ' . $e->getMessage();
+				echo PHP_EOL;
+			}
+		}
+	}
+
+	/**
+	 * Gracefully attempts to get and return a selected database
+	 *
+	 * @param string $database The name of the database
+	 * @param string $role The role of the database, default 'either'
+	 * @return fDatabase The fDatabase object if available, NULL otherwise
+	 */
+	function ___use_db($database, $role = 'either')
+	{
+		try {
+			return iw::getDatabase($database, $role);
+		} catch (fNotFoundException $e) {
+			return NULL;
+		}
+	}
+
+	/**
+	 * Clear the screen
+	 *
+	 * @param void
+	 * @return void
+	 */
+	function ___clear_screen()
+	{
+		if (Flourish\Core::checkOS('windows')) {
+			system('cls');
+		} else {
+			passthru('clear');
+		}
+	}
+

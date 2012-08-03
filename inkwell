@@ -1,0 +1,18 @@
+#!/bin/sh
+
+IW_BASEDIR=$(dirname $0)
+IW_PHP_CMD="php54"
+IW_RLWRAP_CMD="rlwrap"
+
+export IW_PHP_CMD
+
+if [ -n "`$IW_PHP_CMD -v 2> /dev/null`" ]; then
+	if [ -n "`$IW_RLWRAP_CMD -v 2> /dev/null`" ]; then
+		IW_HIST_FILE="$IW_BASEDIR/.console.hist"
+		$IW_RLWRAP_CMD -H $IW_HIST_FILE $IW_PHP_CMD -q -d register_globals=0 -d magic_quotes_gpc=0 -d short_open_tag=0 -d asp_tags=1 -d display_errors=1 $IW_BASEDIR/.console "$@"
+	else
+		$IW_PHP_CMD -q -d register_globals=0 -d magic_quotes_gpc=0 -d short_open_tag=0 -d asp_tags=1 -d display_errors=1 $IW_BASEDIR/.console "$@"
+	fi
+else
+	echo 'Please add the php binary to your path and restart.'
+fi
