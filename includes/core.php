@@ -32,7 +32,6 @@
 		const REGEX_ABSOLUTE_PATH      = '#^(/|\\\\|[a-z]:(\\\\|/)|\\\\|//)#i';
 
 
-
 		/**
 		 * Child objects of the application; accessible via array access
 		 *
@@ -40,6 +39,24 @@
 		 * @var array
 		 */
 		private $children = array();
+
+
+		/**
+		 * Element => Class Translations
+		 *
+		 * @access private
+		 * @var array
+		 */
+		private $elementTranslations = array();
+
+
+		/**
+		 * Classes which we've initialized
+		 *
+		 * @access private
+		 * @var array
+		 */
+		private $initializedClasses = array();
 
 
 		/**
@@ -93,16 +110,16 @@
 			// Add some basic definitions
 			//
 
-			if (!@constant('DS')) {
-				define('DS', self::DS);
+			if (!@constant(__NAMESPACE__ . '\\' . 'DS')) {
+				define(__NAMESPACE__ . '\\' . 'DS', self::DS);
 			}
 
-			if (!@constant('LB')) {
-				define('LB', self::LB);
+			if (!@constant(__NAMESPACE__ . '\\' . 'LB')) {
+				define(__NAMESPACE__ . '\\' . 'LB', self::LB);
 			}
 
-			if (!@constant('REGEX_ABSOLUTE_PATH')) {
-				define('REGEX_ABSOLUTE_PATH', self::REGEX_ABSOLUTE_PATH);
+			if (!@constant(__NAMESPACE__ . '\\' . 'REGEX_ABSOLUTE_PATH')) {
+				define(__NAMESPACE__ . '\\' . 'REGEX_ABSOLUTE_PATH', self::REGEX_ABSOLUTE_PATH);
 			}
 
 			$app = new self($root_directory, $config_callback);
@@ -116,7 +133,7 @@
 				return $app;
 			}
 
-			$config = $app['config']->get('array', 'inkwell');
+			$config = $app['config']->get('array', md5('inkwell.php'));
 
 			//
 			// Initialize Date and Time Information, this has to be before any
@@ -253,11 +270,11 @@
 			// meaning that namespaces will be ignored when loading the classes.
 			//
 
-			$this->loaders['Dotink\Flourish\*']   = 'includes/lib/flourish';
-			$this->loaders['Dotink\Inkwell\*']    = 'includes/lib';
+			$this->loaders['Dotink\Flourish\*']   = 'library/flourish';
+			$this->loaders['Dotink\Inkwell\*']    = 'library';
+
 			$this->loaders['Dotink\Interfaces\*'] = 'includes/interfaces';
 			$this->loaders['Dotink\Traits\*']     = 'includes/traits';
-
 
 			spl_autoload_register([$this, 'loadClass']);
 
@@ -277,7 +294,7 @@
 
 				$this->loaders = array_merge(
 					$this->loaders,
-					$this['config']->get('array', 'autoloaders')
+					$this['config']->get('array', md5('autoloaders.php'))
 				);
 			}
 		}
@@ -293,6 +310,40 @@
 		public function checkExecutionMode($execution_mode)
 		{
 			return $this->executionMode == $execution_mode;
+		}
+
+
+		/**
+		 * Gets the defined/translated class for a particular element ID
+		 *
+		 * @access public
+		 * @param string $element The application element ID to translate
+		 * @return string The name of the class which matches the element ID, NULL if not found.
+		 */
+		public function classize($element)
+		{
+			if (!isset($this->elementTranslations[$element])) {
+				return NULL;
+			}
+
+			return $this->elementTranslations[$element];
+		}
+
+
+		/**
+		 * Get an application element ID from a class
+		 *
+		 * @access public
+		 * @param string $class The class name
+		 * @return string The element ID for the class, NULL if not found.
+		 */
+		public function elementize($class)
+		{
+			if (!($element = array_search($class, $this->elementTranslations))) {
+				return NULL;
+			}
+
+			return $element;
 		}
 
 
@@ -353,6 +404,71 @@
 			}
 
 			return rtrim($write_directory, '/\\' . iw::DS);
+		}
+
+
+		/**
+		 * Initializes a class by calling its __init() method if available
+		 *
+		 * @static
+		 * @access protected
+		 * @param string $class The class to initialize
+		 * @return bool Whether or not the initialization was successful
+		 */
+		public function initializeClass($class)
+		{
+			//
+			// Can't initialize a class that's not loaded
+			//
+
+			if (!class_exists($class, FALSE)) {
+				return FALSE;
+			}
+
+			//
+			// Classes cannot be initialized twice
+			//
+
+			if (in_array($class, $this->initializedClasses)) {
+				return TRUE;
+			}
+
+			$init_callback = [$class, self::INITIALIZATION_METHOD];
+
+			//
+			// If there's no __init we're done
+			//
+
+			if (!is_callable($init_callback)) {
+				return TRUE;
+			}
+
+			$method     = end($init_callback);
+			$reflection = new \ReflectionMethod($class, $method);
+
+			//
+			// If __init is not custom, we're done
+			//
+
+			if ($reflection->getDeclaringClass()->getName() != $class) {
+				return TRUE;
+			}
+
+			//
+			// Determine class configuration and call __init with it
+			//
+
+			$element      = $this->elementize($class);
+			$class_config = $this['config']->get('array', $element);
+
+			try {
+				if (call_user_func($init_callback, $this, $class_config, $element)) {
+					self::$initializedClasses[] = $class;
+					return TRUE;
+				}
+			} catch (Flourish\Exception $e) {}
+
+			return FALSE;
 		}
 
 
@@ -427,13 +543,33 @@
 
 						include $file;
 
-						/*
-						if (is_array($interfaces = class_implements($class, FALSE))) {
-							return (in_array('inkwell', $interfaces))
-								? self::initializeClass($class)
-								: TRUE;
+						if (class_exists($class, FALSE)) {
+
+							//
+							// This means our file actually contained our class so let's generate
+							// an element id for it.  The element ID must be generated using
+							// simple principles.
+							//
+							// 1. Derive the root relative directory, removing leading separator
+							// 2. Directory Separators are normalized, word separators removed
+							// 3. The lowercase value is md5 hashed
+
+							$element = ltrim(str_replace($this->getRoot(), '', $file), '/\\' . DS);
+							$element = str_replace('_', '', str_replace(DS, '/', $element));
+							$element = md5(strtolower($element));
+
+							//
+							// Register the class with that element as a key.
+							//
+
+							$this->elementTranslations[$element] = $class;
+
+							if (is_array($interfaces = class_implements($class, FALSE))) {
+								return (in_array('Dotink\Interfaces\Inkwell', $interfaces))
+									? self::initializeClass($class)
+									: TRUE;
+							}
 						}
-						*/
 					}
 				}
 			}

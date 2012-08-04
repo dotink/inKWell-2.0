@@ -1,3 +1,3 @@
-[submodule "includes/lib/flourish"]
-	path = includes/lib/flourish
-	url = git://github.com/dotink/flourishToo.git
+[submodule "library/flourish"]
+	path = library/flourish
+	url = https://github.com/dotink/flourishToo.git

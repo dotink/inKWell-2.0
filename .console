@@ -30,6 +30,7 @@
 	$_SERVER['REQUEST_URI']     = '/';
 	$_SERVER['REMOTE_ADDR']     = '127.0.0.1';
 	$_SERVER['SERVER_NAME']     = 'localhost';
+	$_SERVER['SERVER_PORT']     = 80;
 	$_SERVER['SERVER_PROTOCOL'] = 'HTTP/1.1';
 	$_SERVER['REQUEST_METHOD']  = 'GET';
 
@@ -255,9 +256,9 @@
 					echo '\q - Quit the Program'             . PHP_EOL;
 					echo '\r - Reset the Program'            . PHP_EOL;
 
-					if ($___dbconf['disabled'] === FALSE) {
-						echo '\s - Run SQL Statement'    . PHP_EOL;
-						echo '\u - Select Database'      . PHP_EOL;
+					if (isset($___database)) {
+						echo '\s - Run SQL Statement'        . PHP_EOL;
+						echo '\u - Select Database'          . PHP_EOL;
 					}
 
 					echo '\> - Change Directory'             . PHP_EOL;
@@ -581,18 +582,26 @@
 								$callee = array();
 
 								do {
-									$t         = $tokens[$i - $x];
-									$callee[] .= $t[1];
+									if (is_string($t) && $t !== '(') {
+										$callee[] = $t;
+									} elseif ($t[0] == T_STRING || $t[0] == T_NS_SEPARATOR) {
+										$callee[] = $t[1];
+									} else {
+										break;
+									}
+
 									$x++;
-								} while ($t[0] == T_STRING || $t[0] == T_NS_SEPARATOR);
+									if (!isset($tokens[$i - $x])) { break; }
+									$t = $tokens[$i - $x];
+
+								} while(TRUE);
 
 								$callee = array_reverse($callee);
 								$callee = trim(implode('', $callee));
 
-								do {
-									$t = $tokens[$i - $x];
-									$x++;
-								} while ($t[0] == T_WHITESPACE);
+								while ($t[0] == T_WHITESPACE && isset($tokens[$i - $x])) {
+									$t = $tokens[$i - $x]; $x++;
+								}
 
 								switch ($t[0]) {
 									case T_NEW:
@@ -606,10 +615,10 @@
 										break;
 
 									default:
-										if (!function_exists($t)) {
+										if (!function_exists($callee)) {
 											echo sprintf(
 												'Error:  Function %s() does not exist.',
-												$t
+												$callee
 											) . PHP_EOL;
 											return FALSE;
 										}

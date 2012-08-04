@@ -140,29 +140,30 @@
 			foreach (glob($directory . DS . '*.php') as $config_file) {
 
 				//
-				// Our element name is determined by the terminating path segments
-				// relative to the depth, without the '.php' extension and completely
-				// lowercased.  Underscores are recommended as good word separators.
+				// We need to generate element IDs that match inKWell's.  So we follow
+				// the rules for generating an ID.
+				//
+				// 1. We only want the tail end of our directory structure based on depth
+				// 2. We recombine using the standard separator, and replace word separator
+				// 3. MD5 hash the lowerecased result
 				//
 
 				$element = array_slice(explode(DS, $config_file), ($depth + 1) * -1);
-				$element = str_replace('.php', '', implode('/', $element));
-				$element = strtolower($element);
+				$element = str_replace('_', '', implode('/', $element));
+				$element = md5(strtolower($element));
+
 				$current = include($config_file);
 
-				//
-				// We actually get our elements by accepting the return of the include.  If
-				// there is a problem with the syntax, it should throw a normal syntax error.
-				//
+				$this->data[$element] = isset($current['data']) ? $current['data'] : array();
 
-				$this->data[$element] = $current['data'];
+				if (isset($current['types'])) {
+					foreach ($current['types'] as $type) {
+						if (!isset($types_ref[$type])) {
+							$types_ref[$type] = array();
+						}
 
-				foreach ($current['types'] as $type) {
-					if (!isset($types_ref[$type])) {
-						$types_ref[$type] = array();
+						$types_ref[$type][$element] =& $this->data[$element];
 					}
-
-					$types_ref[$type][$element] =& $this->data[$element];
 				}
 			}
 
@@ -201,6 +202,24 @@
 
 
 		/**
+		 * Get a config element name from a class, taking translations into account
+		 *
+		 * @static
+		 * @access public
+		 * @param string $class The class name
+		 * @return string The element name for the class
+		 */
+		static public function elementize($class)
+		{
+			if (!($element = array_search($class, $this->classTranslations))) {
+				$element = Flourish\Grammar::underscorize($class);
+			}
+
+			return $element;
+		}
+
+
+		/**
 		 * Gets a configuration element.
 		 *
 		 * Configuration elements must be typehinted.  In the event that the configuration element
@@ -217,8 +236,6 @@
 			$config = NULL;
 
 			if ($element !== NULL) {
-				$element = strtolower($element);
-
 				if (isset($this->data[$element])) {
 					$config = $this->data[$element];
 
@@ -230,13 +247,15 @@
 						}
 					}
 				}
-
 			} else {
 				$config = $this->data;
 			}
 
-			if (($type = gettype($config)) !== $typehint) {
-				switch ($type) {
+			$type     = strtolower(gettype($config));
+			$typehint = strtolower($typehint);
+
+			if ($type != $typehint) {
+				switch ($typehint) {
 					case 'array':
 						return array();
 					case 'string':

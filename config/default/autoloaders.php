@@ -7,6 +7,6 @@
 		// attempt will be made to load any class from these directories.
 		//
 
-		'library' => 'IW:   includes/lib',
-		'vendor'  => 'PSR0: includes/vendor'
+		'library' => 'IW:   library',
+		'vendor'  => 'PSR0: vendor'
 	));
