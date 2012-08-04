@@ -577,12 +577,43 @@
 
 							default:
 
-								if (!function_exists($t)) {
-									echo sprintf(
-										'Error:  Function %s() does not exist.',
-										$t
-									) . PHP_EOL;
-									return FALSE;
+								$x      = 0;
+								$callee = array();
+
+								do {
+									$t         = $tokens[$i - $x];
+									$callee[] .= $t[1];
+									$x++;
+								} while ($t[0] == T_STRING || $t[0] == T_NS_SEPARATOR);
+
+								$callee = array_reverse($callee);
+								$callee = trim(implode('', $callee));
+
+								do {
+									$t = $tokens[$i - $x];
+									$x++;
+								} while ($t[0] == T_WHITESPACE);
+
+								switch ($t[0]) {
+									case T_NEW:
+										if (!class_exists($callee)) {
+											echo sprintf(
+												'Error: Class %s does not exist.',
+												$callee
+											) . PHP_EOL;
+											return FALSE;
+										}
+										break;
+
+									default:
+										if (!function_exists($t)) {
+											echo sprintf(
+												'Error:  Function %s() does not exist.',
+												$t
+											) . PHP_EOL;
+											return FALSE;
+										}
+										break;
 								}
 								break;
 						}

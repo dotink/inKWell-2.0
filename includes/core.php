@@ -253,8 +253,11 @@
 			// meaning that namespaces will be ignored when loading the classes.
 			//
 
-			$this->loaders['Dotink\Flourish\*'] = 'includes/lib/flourish';
-			$this->loaders['Dotink\Inkwell\*']  = 'includes/lib';
+			$this->loaders['Dotink\Flourish\*']   = 'includes/lib/flourish';
+			$this->loaders['Dotink\Inkwell\*']    = 'includes/lib';
+			$this->loaders['Dotink\Interfaces\*'] = 'includes/interfaces';
+			$this->loaders['Dotink\Traits\*']     = 'includes/traits';
+
 
 			spl_autoload_register([$this, 'loadClass']);
 
@@ -369,8 +372,8 @@
 
 			foreach ($loaders as $test => $target) {
 				if (strpos($test, '*') !== FALSE) {
-					$regex = str_replace('*', '(.*?)', str_replace('\\', '\\\\', $test));
-					$match = preg_match('/^' . $regex . '$/', $class);
+					$regex = str_replace('*', '.*', str_replace('\\', '\\\\', $test));
+					$match = preg_match('#^' . $regex . '$#', $class);
 				} elseif (class_exists($test)) {
 					$test  = [$test, self::MATCH_CLASS_METHOD];
 					$match = is_callable($test) ? call_user_func($test, $class) : FALSE;
