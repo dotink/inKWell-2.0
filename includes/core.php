@@ -42,15 +42,6 @@
 
 
 		/**
-		 * Element => Class Translations
-		 *
-		 * @access private
-		 * @var array
-		 */
-		private $elementTranslations = array();
-
-
-		/**
 		 * Classes which we've initialized
 		 *
 		 * @access private
@@ -133,7 +124,20 @@
 				return $app;
 			}
 
-			$config = $app['config']->get('array', md5('inkwell.php'));
+			//
+			// Map our Core configurations
+			//
+
+			$app['config']->map('@autoloaders', 'autoloaders.php');
+			$app['config']->map('@databases',   'databases.php');
+			$app['config']->map('@inkwell',     'inkwell.php');
+			$app['config']->map('@routes',      'routes.php');
+
+			//
+			// Get our core configuration
+			//
+
+			$config = $app['config']->get('array', '@inkwell');
 
 			//
 			// Initialize Date and Time Information, this has to be before any
@@ -294,7 +298,7 @@
 
 				$this->loaders = array_merge(
 					$this->loaders,
-					$this['config']->get('array', md5('autoloaders.php'))
+					$this['config']->get('array', '@autoloaders')
 				);
 			}
 		}
@@ -310,40 +314,6 @@
 		public function checkExecutionMode($execution_mode)
 		{
 			return $this->executionMode == $execution_mode;
-		}
-
-
-		/**
-		 * Gets the defined/translated class for a particular element ID
-		 *
-		 * @access public
-		 * @param string $element The application element ID to translate
-		 * @return string The name of the class which matches the element ID, NULL if not found.
-		 */
-		public function classize($element)
-		{
-			if (!isset($this->elementTranslations[$element])) {
-				return NULL;
-			}
-
-			return $this->elementTranslations[$element];
-		}
-
-
-		/**
-		 * Get an application element ID from a class
-		 *
-		 * @access public
-		 * @param string $class The class name
-		 * @return string The element ID for the class, NULL if not found.
-		 */
-		public function elementize($class)
-		{
-			if (!($element = array_search($class, $this->elementTranslations))) {
-				return NULL;
-			}
-
-			return $element;
 		}
 
 
@@ -458,11 +428,11 @@
 			// Determine class configuration and call __init with it
 			//
 
-			$element      = $this->elementize($class);
-			$class_config = $this['config']->get('array', $element);
+			$class_config = $this['config']->get('array', $class);
+			$element_id   = $this['config']->elementize($class);
 
 			try {
-				if (call_user_func($init_callback, $this, $class_config, $element)) {
+				if (call_user_func($init_callback, $this, $class_config, $element_id)) {
 					self::$initializedClasses[] = $class;
 					return TRUE;
 				}
@@ -500,8 +470,7 @@
 				if (class_exists($class, FALSE)) {
 
 					//
-					// Recursion may have loaded the class at this point, so we may not need to go
-					// any further.
+					// Prevent recursive autoloads from going too far
 					//
 
 					return TRUE;
@@ -518,56 +487,28 @@
 						$target   = trim($target[1]);
 					}
 
-					//
-					// But maybe we do...
-					//
+					$base_dir     = trim($target, '/\\' . DS);
+					$class_path   = $this->transformClass($standard, $class);
+					$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
 
-					$file = implode(DS, array(
-						$this->getRoot(),
+					if (file_exists($include_file)) {
 
-						//
-						// Trim leading or trailing directory separators from target
-						//
-
-						trim($target, '/\\' . DS),
-
-						//
-						// Replace any backslashes in the class with directory separator
-						// to support Namespaces and trim the leading root namespace if present.
-						//
-
-						$this->transformClass($standard, $class)
-					));
-
-					if (file_exists($file)) {
-
-						include $file;
+						include $include_file;
 
 						if (class_exists($class, FALSE)) {
 
 							//
-							// This means our file actually contained our class so let's generate
-							// an element id for it.  The element ID must be generated using
-							// simple principles.
-							//
-							// 1. Derive the root relative directory, removing leading separator
-							// 2. Directory Separators are normalized, word separators removed
-							// 3. The lowercase value is md5 hashed
-
-							$element = ltrim(str_replace($this->getRoot(), '', $file), '/\\' . DS);
-							$element = str_replace('_', '', str_replace(DS, '/', $element));
-							$element = md5(strtolower($element));
-
-							//
-							// Register the class with that element as a key.
+							// Map any available configuration to this class
 							//
 
-							$this->elementTranslations[$element] = $class;
+							if (isset($this['config'])) {
+								$this['config']->map($class, $base_dir . DS . $class_path);
 
-							if (is_array($interfaces = class_implements($class, FALSE))) {
-								return (in_array('Dotink\Interfaces\Inkwell', $interfaces))
-									? self::initializeClass($class)
-									: TRUE;
+								if (is_array($interfaces = class_implements($class, FALSE))) {
+									return (in_array('Dotink\Interfaces\Inkwell', $interfaces))
+										? self::initializeClass($class)
+										: TRUE;
+								}
 							}
 						}
 					}

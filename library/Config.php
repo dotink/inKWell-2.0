@@ -14,7 +14,7 @@
 
 	namespace Dotink\Inkwell;
 
-	use Dotink\Flourish;
+	use \Dotink\Flourish;
 
 	class Config
 	{
@@ -36,6 +36,7 @@
 		 */
 		private $configPath = NULL;
 
+
 		/**
 		 * The configuration data
 		 *
@@ -43,6 +44,16 @@
 		 * @var array
 		 */
 		private $data = array();
+
+
+		/**
+		 * Element Translations
+		 *
+		 * @access private
+		 * @var array
+		 */
+		private $elementTranslations = array();
+
 
 		/**
 		 *
@@ -68,6 +79,22 @@
 			array_map('strtolower', $types);
 
 			return ['types' => $types, 'data' => $data];
+		}
+
+
+		/**
+		 * Generates a configuration element ID from a path
+		 *
+		 * @static
+		 * @access private
+		 * @param string $path The path to generate an ID for
+		 */
+		static private function generateElementId($path)
+		{
+			$path = str_replace(DS, '/', $path);
+			$path = Flourish\Grammar::underscorize($path);
+
+			return md5($path);
 		}
 
 
@@ -137,24 +164,21 @@
 			// Loads each PHP file into a configuration element named after the file.
 			//
 
-			foreach (glob($directory . DS . '*.php') as $config_file) {
+			foreach (glob($directory . DS . '*.php') as $file) {
 
-				//
-				// We need to generate element IDs that match inKWell's.  So we follow
-				// the rules for generating an ID.
-				//
-				// 1. We only want the tail end of our directory structure based on depth
-				// 2. We recombine using the standard separator, and replace word separator
-				// 3. MD5 hash the lowerecased result
-				//
+				$config_path =  implode('/', array_slice(explode(DS, $file), ($depth + 1) * -1));
+				$element_id  =  self::generateElementId($config_path);
+				$current     =  include($file);
 
-				$element = array_slice(explode(DS, $config_file), ($depth + 1) * -1);
-				$element = str_replace('_', '', implode('/', $element));
-				$element = md5(strtolower($element));
+				if (isset($current['data'])) {
+					$this->data[$element_id] = $current['data'];
 
-				$current = include($config_file);
-
-				$this->data[$element] = isset($current['data']) ? $current['data'] : array();
+					if (isset($this->data[$element_id]['class'])) {
+						$this->map($this->data[$element_id]['class'], $element_id);
+					}
+				} else {
+					$this->data[$element_id] = array();
+				}
 
 				if (isset($current['types'])) {
 					foreach ($current['types'] as $type) {
@@ -162,7 +186,7 @@
 							$types_ref[$type] = array();
 						}
 
-						$types_ref[$type][$element] =& $this->data[$element];
+						$types_ref[$type][$element_id] =& $data_element;
 					}
 				}
 			}
@@ -202,17 +226,33 @@
 
 
 		/**
-		 * Get a config element name from a class, taking translations into account
+		 * Gets the defined/translated class for a particular element ID
 		 *
-		 * @static
+		 * @access public
+		 * @param string $element The application element ID to translate
+		 * @return string The name of the class which matches the element ID, NULL if not found.
+		 */
+		public function classize($element)
+		{
+			if (!isset($this->elementTranslations[$element])) {
+				return NULL;
+			}
+
+			return $this->elementTranslations[$element];
+		}
+
+
+		/**
+		 * Get an application element ID from a class
+		 *
 		 * @access public
 		 * @param string $class The class name
-		 * @return string The element name for the class
+		 * @return string The element ID for the class, NULL if not found.
 		 */
-		static public function elementize($class)
+		public function elementize($class)
 		{
-			if (!($element = array_search($class, $this->classTranslations))) {
-				$element = Flourish\Grammar::underscorize($class);
+			if (!($element = array_search($class, $this->elementTranslations))) {
+				return NULL;
 			}
 
 			return $element;
@@ -228,16 +268,20 @@
 		 *
 		 * @access public
 		 * @param string $typehint The typehint for the config element
-		 * @param string $element The element to get
-		 * @return mixed The configuration element or default empty value
+		 * @param string $class The class to get the configuration for
+		 * @param string $element The configuration element to get
+		 * @param ...
+		 * @return mixed The configuration element or default empty value if none is found
 		 */
-		public function get($typehint, $element = NULL)
+		public function get($typehint, $class = NULL, $element = NULL)
 		{
 			$config = NULL;
 
-			if ($element !== NULL) {
-				if (isset($this->data[$element])) {
-					$config = $this->data[$element];
+			if ($class !== NULL) {
+				$element_id = $this->elementize($class);
+
+				if ($element_id && isset($this->data[$element_id])) {
+					$config = $this->data[$element_id];
 
 					foreach (array_slice(func_get_args(), 2) as $sub_element) {
 						if (isset($config[$sub_element])) {
@@ -273,6 +317,31 @@
 			return $config;
 		}
 
+
+		/**
+		 * Maps a class to an element ID using the config path
+		 *
+		 * The configuration path must be relative to the configuration directory.  Additional
+		 * normalization will be done to ensure that it is in underscore notation and that
+		 * directory separators will match.
+		 *
+		 * @param string $class The class to map
+		 * @param string $config_path The relative path for the class conf
+		 */
+		public function map($class, $config_path)
+		{
+			$element_id = self::generateElementId($config_path);
+
+			if (isset($this->elementTranslations[$element_id])) {
+				throw new Flourish\ProgrammerException(
+					'Cannot map class "%s" to element id "%s", already mapped',
+					$class,
+					$element_id
+				);
+			}
+
+			$this->elementTranslations[$element_id] = $class;
+		}
 
 		/**
 		 * Writes the configuration out to a cache file
