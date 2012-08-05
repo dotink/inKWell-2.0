@@ -1,6 +1,4 @@
-<?php
-
-	namespace Dotink\Inkwell;
+<?php namespace Dotink\Inkwell {
 
 	return Config::create('Core', [
 
@@ -36,3 +34,4 @@
 			'vendor'  => 'PSR0: vendor'
 		]
 	]);
+}

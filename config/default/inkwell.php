@@ -1,6 +1,6 @@
-<?php namespace Dotink\Inkwell;
+<?php namespace Dotink\Inkwell {
 
-	return Config::create('Core', array(
+	return Config::create('Core', [
 
 		// The active domain name for the site.  This can handle automatic
 		// redirection if the site is hit from an alias (i.e. throw away your)
@@ -61,10 +61,11 @@
 		//
 		// $user->prepareLastAccessedTimestamp('access_timestamp')
 
-		'date_formats'          => array(
+		'date_formats' => [
 
 			'console_date'      => 'M jS, Y',
 			'console_time'      => 'g:ia',
 			'console_timestamp' => 'M jS, Y @ g:ia'
-		),
-	));
+		]
+	]);
+}

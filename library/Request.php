@@ -1,4 +1,4 @@
-<?php
+<?php namespace Dotink\Inkwell {
 
 	/**
 	 * Request class responsible for creating / executing requests.
@@ -11,8 +11,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	namespace Dotink\Inkwell;
 
 	use Dotink\Flourish;
 
@@ -95,7 +93,7 @@
 			//
 
 			foreach (['GET', 'PUT', 'POST', 'DELETE', 'HEAD'] as $method) {
-				if (!@constant(__NAMESPACE__ . '\\' . $method)) {
+				if (@!constant(__NAMESPACE__ . '\\' . $method)) {
 					define(__NAMESPACE__ . '\\' . $method, strtolower($method));
 				}
 			}
@@ -856,3 +854,4 @@
 			}
 		}
 	}
+}

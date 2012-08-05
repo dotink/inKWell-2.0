@@ -1,6 +1,6 @@
-<?php namespace Dotink\Inkwell;
+<?php namespace Dotink\Inkwell {
 
-	return Config::create('Library', array(
+	return Config::create('Library', [
 
 		// The directory relative to the inKWell root directory in which views
 		// are stored.  Using the set() or add() method on a view will prepend
@@ -34,4 +34,5 @@
 		// cached versions of minified Javascript and CSS.
 
 		'cache_directory' => 'cache'
-	));
+	]);
+}

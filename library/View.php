@@ -1,4 +1,4 @@
-<?php
+<?php namespace Dotink\Inkwell {
 
 	/**
 	 * Scaffolder Class
@@ -11,11 +11,10 @@
 	 * @package Dotink\Inkwell
 	 */
 
-	namespace Dotink\Inkwell;
-
 	use Dotink\Flourish;
 
 	class Scaffolder
 	{
 
 	}
+}

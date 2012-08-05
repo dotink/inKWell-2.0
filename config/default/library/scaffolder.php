@@ -1,6 +1,6 @@
-<?php namespace Dotink\Inkwell;
+<?php namespace Dotink\Inkwell {
 
-	return Config::create('Library', array(
+	return Config::create('Library', [
 
 		//
 		// Preload our scaffolder
@@ -19,4 +19,5 @@
 
 		'root_directory' => 'scaffolding',
 
-	));
+	]);
+}

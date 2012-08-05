@@ -1,4 +1,4 @@
-<?php
+<?php namespace Dotink\Inkwell {
 
 	/**
 	 *
@@ -11,8 +11,7 @@
 	 * @package Dotink\Inkwell
 	 */
 
-	namespace Dotink\Inkwell;
-	use       Dotink\Flourish;
+	use Dotink\Flourish;
 
 	class Controller implements \ArrayAccess
 	{
@@ -23,3 +22,4 @@
 			$this->peers = $peers;
 		}
 	}
+}

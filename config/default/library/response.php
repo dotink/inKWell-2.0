@@ -1,4 +1,4 @@
-<?php namespace Dotink\Inkwell;
+<?php namespace Dotink\Inkwell {
 
 	return Config::create(['Library', '@autoloading'], [
 
@@ -104,3 +104,4 @@
 			'map' => ['Response*' => 'includes/lib/responses']
 		]
 	]);
+}

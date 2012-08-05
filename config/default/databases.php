@@ -1,13 +1,13 @@
-<?php namespace Dotink\Inkwell;
+<?php namespace Dotink\Inkwell {
 
-	return Config::create('Core', array(
+	return Config::create('Core', [
 
 		// By default database support is disabled.  You should not set this to FALSE unless you
 		// configure at least one database below.
 
 		'disabled'  => TRUE,
 
-		'databases' => array(
+		'databases' => [
 
 			// Multiple databases can be configured.  If database support is enabled above the
 			// default database is always 'default', but it is possible to add independent
@@ -20,7 +20,7 @@
 			//
 			// For more information about roles, please see Flourish's fORM Documentation.
 
-			'default::both' => array(
+			'default::both' => [
 
 				// The database types used/allowed by inKWell reflect whatever is currently
 				// supported by Flourish, examples at the time of creating this file include:
@@ -47,7 +47,8 @@
 				//
 				// <address>:<port>
 
-				'hosts' => array('127.0.0.1'),
-			),
-		),
-	));
+				'hosts' => ['127.0.0.1'],
+			],
+		],
+	]);
+}

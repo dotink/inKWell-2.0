@@ -1,4 +1,4 @@
-<?php
+<?php namespace Dotink\Inkwell {
 
 	/**
 	 * Routes class responsible for mapping request paths to logic.
@@ -10,8 +10,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	namespace Dotink\Inkwell;
 
 	use Dotink\Flourish;
 
@@ -41,3 +39,4 @@
 			return 0;
 		}
 	}
+}

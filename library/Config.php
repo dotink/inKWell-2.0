@@ -1,4 +1,4 @@
-<?php
+<?php namespace Dotink\Inkwell {
 
 	/**
 	 * Config class responsible for building and representing configuration information as well
@@ -11,8 +11,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	namespace Dotink\Inkwell;
 
 	use Dotink\Flourish;
 
@@ -277,7 +275,7 @@
 					$configs_by_type = $this->data[self::CONFIG_BY_TYPES_ELEMENT][$type];
 
 					foreach ($configs_by_type as $element_id => $config) {
-						foreach (array_slice(func_get_args(), 2) as $sub_element) {
+						foreach ($sub_elements as $sub_element) {
 							if (isset($config[$sub_element])) {
 								$config = $config[$sub_element];
 							} else {
@@ -437,3 +435,4 @@
 			return $this;
 		}
 	}
+}

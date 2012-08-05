@@ -1,4 +1,5 @@
-<?php
+<?php namespace Dotink\Inkwell {
+
 
 	/**
 	 * IW is the core inKWell class.
@@ -12,8 +13,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	namespace Dotink\Inkwell;
 
 	use Dotink\Flourish;
 
@@ -743,3 +742,4 @@
 			return call_user_func($this->loadingStandards[$standard], $class);
 		}
 	}
+}

@@ -1,6 +1,6 @@
-<?php namespace Dotink\Inkwell;
+<?php namespace Dotink\Inkwell {
 
-	return Config::create('Library', array(
+	return Config::create('Library', [
 
 		// Whether or not we should attempt to auto scaffold records using this class.
 
@@ -14,6 +14,7 @@
 		// The wildcard autoloader means to use this classes __match() method and attemp to load
 		// from it's root directory.  Removing it will remove record set autoloading.
 
-		'autoloaders' => array('*')
+		'autoloaders' => ['*']
 
-	));
+	]);
+}
