@@ -41,8 +41,13 @@
 				throw new \Exception('Unable to include inititialization file.');
 			}
 
-			$app      = include($init);
-			$response = $app->run(new Routes(), new Request());
+			$app = include($init);
+
+			$app->register('router', 'Dotink\Inkwell\Routes', function() {
+				return new Routes();
+			});
+
+			$response = $app->run(new Request());
 			$return   = Response::resolve($response)->send();
 
 			exit($return);

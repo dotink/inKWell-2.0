@@ -33,12 +33,26 @@
 
 
 		/**
+		 * Whether or not an app instance has been created somewhere
+		 *
+		 * @access private
+		 * @var boolean
+		 */
+		static private $appExists = FALSE;
+
+		/**
 		 * Child objects of the application; accessible via array access
 		 *
 		 * @access private
 		 * @var array
 		 */
 		private $children = array();
+
+
+		/**
+		 * Available factories
+		 */
+		private $factories = array();
 
 
 		/**
@@ -60,12 +74,12 @@
 
 
 		/**
-		 * Registered autoloader standard callbacks
+		 * Autoloading standard tranformation callbacks
 		 *
 		 * @access private
 		 * @var array
 		 */
-		private $loaderStandards = array();
+		private $loadingStandards = array();
 
 
 		/**
@@ -95,120 +109,21 @@
 		 * @param Callable $config_callback The configuration callback
 		 * @return IW A new instance of an inKWell application
 		 */
-		static public function init($root_directory, Callable $config_callback)
+		static public function init($root_directory)
 		{
 			//
-			// Add some basic definitions
+			// Add some basic definitions if another app hasn't already
 			//
 
-			if (!@constant(__NAMESPACE__ . '\\' . 'DS')) {
+			if (!self::$appExists) {
 				define(__NAMESPACE__ . '\\' . 'DS', self::DS);
-			}
-
-			if (!@constant(__NAMESPACE__ . '\\' . 'LB')) {
 				define(__NAMESPACE__ . '\\' . 'LB', self::LB);
-			}
-
-			if (!@constant(__NAMESPACE__ . '\\' . 'REGEX_ABSOLUTE_PATH')) {
 				define(__NAMESPACE__ . '\\' . 'REGEX_ABSOLUTE_PATH', self::REGEX_ABSOLUTE_PATH);
+
+				self::$appExists = TRUE;
 			}
 
-			$app = new self($root_directory, $config_callback);
-
-			if (!isset($app['config'])) {
-
-				//
-				// Return our application immediately if there is no config
-				//
-
-				return $app;
-			}
-
-			//
-			// Map our Core configurations
-			//
-
-			$app['config']->map('@autoloaders', 'autoloaders.php');
-			$app['config']->map('@databases',   'databases.php');
-			$app['config']->map('@inkwell',     'inkwell.php');
-			$app['config']->map('@routes',      'routes.php');
-
-			//
-			// Get our core configuration
-			//
-
-			$config = $app['config']->get('array', '@inkwell');
-
-			//
-			// Initialize Date and Time Information, this has to be before any
-			// time related functions.
-			//
-
-			Flourish\Timestamp::setDefaultTimezone(isset($config['default_timezone'])
-				? $config['default_timezone']
-				: 'GMT'
-			);
-
-			if (isset($config['date_formats']) && is_array($config['date_formats'])) {
-				foreach ($config['date_formats'] as $name => $format) {
-					Flourish\Timestamp::defineFormat($name, $format);
-				}
-			}
-
-			//
-			// Set up execution mode
-			//
-
-			$valid_execution_modes = ['development', 'production'];
-			$app->executionMode    = self::DEFAULT_EXECUTION_MODE;
-
-			if (isset($config['execution_mode'])) {
-				if (in_array($config['execution_mode'], $valid_execution_modes)) {
-					$app->executionMode = $config['execution_mode'];
-				}
-			}
-
-			//
-			// Initialize Error Reporting
-			//
-
-			if (isset($config['error_level'])) {
-				error_reporting($config['error_level']);
-			}
-
-			if (isset($config['display_errors'])) {
-				if ($config['display_errors']) {
-					Flourish\Core::enableErrorHandling('html');
-					Flourish\Core::enableExceptionHandling('html', 'time');
-					ini_set('display_errors', 1);
-				} elseif (isset($config['error_email_to'])) {
-					Flourish\Core::enableErrorHandling($config['error_email_to']);
-					Flourish\Core::enableExceptionHandling($config['error_email_to'], 'time');
-					ini_set('display_errors', 0);
-				} else {
-					ini_set('display_errors', 0);
-				}
-			} elseif ($app->checkExecutionMode('development')) {
-				ini_set('display_errors', 1);
-			} else {
-				ini_set('display_errors', 0);
-			}
-
-			//
-			// Set up our write directory
-			//
-
-			$write_directory = !isset($config['write_directory']) || !$config['write_directory']
-				? self::DEFAULT_WRITE_DIRECTORY
-				: $config['write_directory'];
-
-			if (!preg_match(REGEX_ABSOLUTE_PATH, $write_directory)) {
-				$app->writeDirectory = $app->getRoot(NULL, $write_directory);
-			} else {
-				$app->writeDirectory = $write_directory;
-			}
-
-			return $app;
+			return new self($root_directory);
 		}
 
 
@@ -266,8 +181,7 @@
 			// Set our application root
 			//
 
-			$this->setRoot(NULL,     $root_directory);
-			$this->setRoot('config', $root_directory . DS . self::DEFAULT_CONFIG_DIRECTORY);
+			$this->setRoot(NULL, $root_directory);
 
 			//
 			// Our initial loader map is established.  This will use compatibility transformations,
@@ -277,30 +191,24 @@
 			$this->loaders['Dotink\Flourish\*']   = 'library/flourish';
 			$this->loaders['Dotink\Inkwell\*']    = 'library';
 
-			$this->loaders['Dotink\Interfaces\*'] = 'includes/interfaces';
-			$this->loaders['Dotink\Traits\*']     = 'includes/traits';
+			$this->loaders['Dotink\Interfaces\*'] = 'library/interfaces';
+			$this->loaders['Dotink\Traits\*']     = 'library/traits';
 
 			spl_autoload_register([$this, 'loadClass']);
+		}
 
-			$this->registerLoaderStandard('PSR0', [__CLASS__, 'transformClassToPSR0']);
-			$this->registerLoaderStandard('IW',   [__CLASS__, 'transformClassToIW']);
 
-			//
-			// Get our config from our callback
-			//
+		/**
+		 * Adds an autoloading standard
+		 *
+		 * @access public
+		 * @param string $standard The standard to register as
+		 * @param Callable $transform_callback The callback to register for transformation
+		 * @return void
+		 */
+		public function addLoadingStandard($standard, Callable $transform_callback)
+		{
 
-			if ($config_callback) {
-				$this->children['config'] = call_user_func($config_callback, $this);
-
-				//
-				// Merge in additional autoloaders
-				//
-
-				$this->loaders = array_merge(
-					$this->loaders,
-					$this['config']->get('array', '@autoloaders')
-				);
-			}
 		}
 
 
@@ -314,6 +222,172 @@
 		public function checkExecutionMode($execution_mode)
 		{
 			return $this->executionMode == $execution_mode;
+		}
+
+
+		/**
+		 * Create an an instance from the available factories
+		 *
+		 * @access public
+		 * @param string $alias The alias the factory is registered under
+		 * @param string|array $interfaces The interfaces it must implement
+		 * @param mixed First parameter to factory...
+		 * @param ...
+		 * @return mixed An object instance of the alias type, implementing the provided interfaces
+		 */
+		public function create($alias = NULL, $interfaces = [], $param = NULL)
+		{
+			if ($alias === NULL) {
+				return new self($this->getRoot());
+			}
+
+			settype($interfaces, 'array');
+			$alias = strtolower($alias);
+
+			foreach ($this->factories[$alias] as $class => $factory) {
+				if (class_exists($class)) {
+
+					$class_interfaces = class_implements($class);
+
+					if (count(array_diff($interfaces, $class_interfaces))) {
+						continue;
+					}
+
+					$factory = !is_callable($factory)
+						? $class . '::' . $factory
+						: $factory;
+
+					if (is_callable($factory)) {
+						$result = call_user_func_array($factory, array_slice(func_get_args(), 2));
+
+						if (!($result instanceof $class)) {
+							throw new Flourish\ProgrammerException(
+								'Fetched instance is not an instance of class "%s", bad factory',
+								$class
+							);
+						}
+
+						return $result;
+					}
+				}
+			}
+
+			throw new Flourish\ValidationException(
+				'No class implementing the requested interfaces exists for alias "%s"',
+				$alias
+			);
+		}
+
+
+		/**
+		 * Configure our application
+		 *
+		 * @access public
+		 * @param string $config_name The name of the config to use, default NULL (Config default)
+		 * @param string $config_root The configuration root
+		 * @return IW The application for chaining
+		 */
+		public function config($config_name = NULL, $config_root = NULL)
+		{
+			$this->setRoot('config', !isset($config_root)
+				? $this->getRoot() . DS . self::DEFAULT_CONFIG_DIRECTORY
+				: $config_root
+			);
+
+			$config = $this->create('config', [], $this->getRoot('config'), $config_name);
+
+			//
+			// Set up our autoloaders
+			//
+
+			foreach($config->getAllByType('array', '@autoloading') as $autoloading_config) {
+				settype($autoloading_config['standards'], 'array');
+				settype($autoloading_config['map'], 'array');
+
+				foreach ($autoloading_config['standards'] as $standard => $transform_callback) {
+					$this->loadingStandards[strtolower($standard)] = $transform_callback;
+				}
+
+				$this->loaders = array_merge($this->loaders, $autoloading_config['map']);
+			}
+
+			//
+			// Assign our configuration object to a child, and swap it for some data
+			//
+
+			$this->children['config'] = $config;
+			$config                   = $this['config']->get('array', '@inkwell');
+
+			//
+			// Initialize Date and Time Information, this has to be before any
+			// time related functions.
+			//
+
+			Flourish\Timestamp::setDefaultTimezone(isset($config['default_timezone'])
+				? $config['default_timezone']
+				: 'GMT'
+			);
+
+			if (isset($config['date_formats']) && is_array($config['date_formats'])) {
+				foreach ($config['date_formats'] as $name => $format) {
+					Flourish\Timestamp::defineFormat($name, $format);
+				}
+			}
+
+			//
+			// Set up execution mode
+			//
+
+			$valid_execution_modes = ['development', 'production'];
+			$this->executionMode    = self::DEFAULT_EXECUTION_MODE;
+
+			if (isset($config['execution_mode'])) {
+				if (in_array($config['execution_mode'], $valid_execution_modes)) {
+					$this->executionMode = $config['execution_mode'];
+				}
+			}
+
+			//
+			// Initialize Error Reporting
+			//
+
+			if (isset($config['error_level'])) {
+				error_reporting($config['error_level']);
+			}
+
+			if (isset($config['display_errors'])) {
+				if ($config['display_errors']) {
+					Flourish\Core::enableErrorHandling('html');
+					Flourish\Core::enableExceptionHandling('html', 'time');
+					ini_set('display_errors', 1);
+				} elseif (isset($config['error_email_to'])) {
+					Flourish\Core::enableErrorHandling($config['error_email_to']);
+					Flourish\Core::enableExceptionHandling($config['error_email_to'], 'time');
+					ini_set('display_errors', 0);
+				} else {
+					ini_set('display_errors', 0);
+				}
+			} elseif ($this->checkExecutionMode('development')) {
+				ini_set('display_errors', 1);
+			} else {
+				ini_set('display_errors', 0);
+			}
+
+			//
+			// Set up our write directory
+			//
+
+			$write_directory = !isset($config['write_directory']) || !$config['write_directory']
+				? self::DEFAULT_WRITE_DIRECTORY
+				: $config['write_directory'];
+
+			if (!preg_match(REGEX_ABSOLUTE_PATH, $write_directory)) {
+				$this->writeDirectory = $this->getRoot(NULL, $write_directory);
+			} else {
+				$this->writeDirectory = $write_directory;
+			}
+
+			return $this;
 		}
 
 
@@ -518,6 +592,7 @@
 			return FALSE;
 		}
 
+
 		/**
 		 * Sets a child element via array access (NOT ALLOWED)
 		 *
@@ -534,6 +609,7 @@
 			);
 		}
 
+
 		/**
 		 * Checks whether or not a child element exists
 		 *
@@ -545,6 +621,7 @@
 		{
 			return isset($this->children[$offset]);
 		}
+
 
 		/**
 		 * Attempts to unset a child element (NOT ALLOWED)
@@ -561,6 +638,7 @@
 			);
 		}
 
+
 		/**
 		 * Gets a child element
 		 *
@@ -572,61 +650,66 @@
 			return $this->children[$offset];
 		}
 
-		/**
-		 * Registers an autoloader standard
-		 *
-		 * @access public
-		 * @param string $standard The standard to register as
-		 * @param Callable $transform_callback The callback to register for transformation
-		 * @return void
-		 */
-		public function registerLoaderStandard($standard, Callable $transform_callback)
-		{
-			$this->loaderStandards[strtolower($standard)] = $transform_callback;
-		}
 
 		/**
-		 * Runs the Application with a provided Router and Request
+		 * Registers a factory
 		 *
 		 * @access public
-		 * @param Routes $routes
+		 * @param string $alias The alias to register the factory under
+		 * @param string $class The class to register
+		 * @param string|Closure The factory
+		 */
+		public function register($alias, $class, $factory)
+		{
+			$alias = strtolower($alias);
+
+			if (!isset($this->factories[$alias])) {
+				$this->factories[$alias] = array();
+			}
+
+			$this->factories[$alias][$class] = $factory;
+		}
+
+
+		/**
+		 * Runs the application with a provided Request
+		 *
+		 * @access public
 		 * @param Request $request
 		 * @return integer The return value
 		 */
-		public function run($routes, $request)
+		public function run($request)
 		{
-			foreach ($this['config']->get('array', 'routes') as $route => $target) {
-				$routes->any[$route] = $target;
-			}
-
-			$this->children['routes']  = $routes;
-			$this->children['request'] = $request;
-
-			return $this['routes']->run($this['request']);
+			//
+			// This method will be responsible for adding all configured routes
+			// to the router and then running it with the provided request
+			//
 		}
+
 
 		/**
 		 * Sets a Root Directory
 		 *
 		 * @access protected
 		 * @param string $key The key to set a root directory for
-		 * @param string $directory The root directory
+		 * @param string $root_directory The root directory
 		 * @return void
 		 */
-		protected function setRoot($key, $directory)
+		protected function setRoot($key, $root_directory)
 		{
-			$directory         = str_replace('/', DS, rtrim($directory, '/\\' . DS));
-			$this->roots[$key] = !preg_match(REGEX_ABSOLUTE_PATH, $directory)
-				? realpath($this->roots[NULL] . DS . $directory)
-				: realpath($directory);
+			$root_directory    = str_replace('/', DS, rtrim($root_directory, '/\\' . DS));
+			$this->roots[$key] = !preg_match(REGEX_ABSOLUTE_PATH, $root_directory)
+				? realpath($this->roots[NULL] . DS . $root_directory)
+				: realpath($root_directory);
 
 			if (!is_dir($this->roots[$key])) {
 				throw new Flourish\ProgrammerException(
 					'Cannot set root directory "%s", directory does not exist',
-					$directory
+					$root_directory
 				);
 			}
 		}
+
 
 		/**
 		 * Transforms a class name to a given (registered) standard
@@ -650,14 +733,13 @@
 
 			$standard = strtolower($standard);
 
-			if (!isset($this->loaderStandards[$standard])) {
-				var_dump($this->loaderStandards); exit();
+			if (!isset($this->loadingStandards[$standard])) {
 				throw new Flourish\ProgrammerException(
 					'Cannot transform class using "%s", standard not registered',
 					$standard
 				);
 			}
 
-			return call_user_func($this->loaderStandards[$standard], $class);
+			return call_user_func($this->loadingStandards[$standard], $class);
 		}
 	}

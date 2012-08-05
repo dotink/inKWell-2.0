@@ -1,6 +1,6 @@
-<?php
+<?php namespace Dotink\Inkwell;
 
-	return self::create('Core', array(
+	return Config::create('Core', array(
 
 		// The active domain name for the site.  This can handle automatic
 		// redirection if the site is hit from an alias (i.e. throw away your)

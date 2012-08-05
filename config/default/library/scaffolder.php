@@ -1,6 +1,6 @@
-<?php
+<?php namespace Dotink\Inkwell;
 
-	return self::create('Library', array(
+	return Config::create('Library', array(
 
 		//
 		// Preload our scaffolder

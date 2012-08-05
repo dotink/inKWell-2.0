@@ -1,6 +1,6 @@
-<?php
+<?php namespace Dotink\Inkwell;
 
-	return self::create('Library', array(
+	return Config::create('Library', array(
 
 		// The directory relative to the inKWell root directory in which views
 		// are stored.  Using the set() or add() method on a view will prepend

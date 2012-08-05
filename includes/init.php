@@ -5,16 +5,19 @@
 	include 'core.php';
 	include 'functions.php';
 
-	return IW::init(realpath(dirname(__DIR__)), function($app){
+	$app = IW::init(realpath(dirname(__DIR__)));
 
-		//
-		// You can modify the logic below to determine the config directory in different ways.  By
-		// default we will try to get this value from the server's IW_CONFIG environment variable,
-		// but you might want to change it based on the SERVER_NAME, or something else.
-		//
-
-		$config_name  = isset($_SERVER['IW_CONFIG']) ? $_SERVER['IW_CONFIG'] : NULL;
-		$config       = new Config($config_name);
-
-		return $config->build($app->getRoot('config'));
+	$app->register('config', 'Dotink\Inkwell\Config', function($dir, $name = NULL) {
+		return new Config($dir, $name);
 	});
+
+	//
+	// Feel free to change how your configuration is done below.  You can point it to a different
+	// base directory or change the name based on the server host, i.e. dev.example.com might
+	// use a config named 'development' while www.example.com will use 'production'
+	//
+
+	$config_name = isset($_SERVER['IW_CONFIG']) ? $_SERVER['IW_CONFIG'] : NULL;
+	$config_dir  = NULL;
+
+	return $app->config($config_name, $config_dir);

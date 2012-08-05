@@ -14,7 +14,7 @@
 
 	namespace Dotink\Inkwell;
 
-	use \Dotink\Flourish;
+	use Dotink\Flourish;
 
 	class Config
 	{
@@ -25,14 +25,17 @@
 		/**
 		 * The cache file for the config
 		 *
-		 *
+		 * @access private
+		 * @var string
 		 */
 		private $cacheFile = NULL;
 
 
 		/**
+		 * The directory from which the configuration was built
 		 *
-		 *
+		 * @access private
+		 * @var string
 		 */
 		private $configPath = NULL;
 
@@ -97,131 +100,78 @@
 			return md5($path);
 		}
 
+		/**
+		 * Normalizes a configuration value to a typehint
+		 *
+		 * @static
+		 * @access private
+		 * @return mixed The configuration element or default empty value if none is found
+		 */
+		static private function normalize($config, $typehint)
+		{
+			$type     = strtolower(gettype($config));
+			$typehint = strtolower($typehint);
+
+			if ($type != $typehint) {
+				switch ($typehint) {
+					case 'array':
+						return array();
+					case 'string':
+						return '';
+					case 'bool':
+					case 'boolean':
+						return FALSE;
+					case 'int':
+					case 'float':
+					case 'integer':
+						return 0;
+				}
+			}
+
+			return $config;
+		}
+
 
 		/**
 		 * Construct a configuration object
 		 *
 		 * This does not inherently build the configuration.
 		 */
-		public function __construct($name = NULL)
+		public function __construct($directory, $name = NULL)
 		{
-			$this->name = $name ?: self::DEFAULT_CONFIG;
-		}
+			$directory  = rtrim($directory, '/\\' . DS);
+			$directory  = str_replace('/', DS, $directory);
 
-
-		/**
-		 * Build the configuration
-		 *
-		 * This will attempt to use a cached copy of the configuration if it exists.  If it does
-		 * not exist or is invalid, it will build from the provided directory.  To clear the
-		 * cached version, please see the reset() method.
-		 *
-		 * @access public
-		 *
-		 */
-		public function build($directory = NULL, $depth = 0)
-		{
-			if ($depth == 0) {
-
-				$directory = rtrim($directory, '/\\' . DS);
-				$directory = str_replace('/', DS, $directory);
-
-				if (!preg_match(REGEX_ABSOLUTE_PATH, $directory)) {
-					throw new Flourish\ProgrammerException(
-						'Cannot build config "%s" from "%s", must be an absolute path',
-						$this->name,
-						$directory
-					);
-				}
-
-				$this->cacheFile  = $directory . DS . '.' . $this->name;
-				$this->configPath = $directory . DS . $this->name;
-
-				if (is_readable($this->cacheFile) && ($data = @unserialize($this->cacheFile))) {
-					$this->data = $data;
-
-					//
-					// We want to return almost immediately if we got good data from our cache
-					//
-
-					return $this;
-				}
-
-				$this->data = [self::CONFIG_BY_TYPES_ELEMENT => []];
-				$directory  = $this->configPath;
+			if (!preg_match(REGEX_ABSOLUTE_PATH, $directory)) {
+				throw new Flourish\ProgrammerException(
+					'Directory "%s" is invalide, must be absolute path',
+					$directory
+				);
 			}
 
- 			if (!is_readable($directory)) {
+			$this->name       = $name ?: self::DEFAULT_CONFIG;
+			$this->cacheFile  = $directory . DS . '.' . $this->name;
+			$this->configPath = $directory . DS . $this->name;
+			$this->data       = [self::CONFIG_BY_TYPES_ELEMENT => []];
+
+			if (is_readable($this->cacheFile) && ($data = @unserialize($this->cacheFile))) {
+				$this->data = $data;
+
+				//
+				// We want to return immediately if we got good data from our cache
+				//
+
+				return $this;
+			}
+
+ 			if (!is_readable($this->configPath)) {
 				throw new Flourish\ProgrammerException(
 					'Cannot build configuration, directory "%s" is not readable.',
 					$directory
 				);
  			}
 
- 			$types_ref =& $this->data[self::CONFIG_BY_TYPES_ELEMENT];
-
-			//
-			// Loads each PHP file into a configuration element named after the file.
-			//
-
-			foreach (glob($directory . DS . '*.php') as $file) {
-
-				$config_path =  implode('/', array_slice(explode(DS, $file), ($depth + 1) * -1));
-				$element_id  =  self::generateElementId($config_path);
-				$current     =  include($file);
-
-				if (isset($current['data'])) {
-					$this->data[$element_id] = $current['data'];
-
-					if (isset($this->data[$element_id]['class'])) {
-						$this->map($this->data[$element_id]['class'], $element_id);
-					}
-				} else {
-					$this->data[$element_id] = array();
-				}
-
-				if (isset($current['types'])) {
-					foreach ($current['types'] as $type) {
-						if (!isset($types_ref[$type])) {
-							$types_ref[$type] = array();
-						}
-
-						$types_ref[$type][$element_id] =& $data_element;
-					}
-				}
-			}
-
-			//
-			// Ensures we recusively scan all directories and merge all configurations.
-			//
-
-			foreach (glob($directory . DS . '*', GLOB_ONLYDIR) as $directory) {
-				$this->build($directory, $depth + 1);
-			}
-
-			//
-			// Lastly, if this configuration name is not the default, merge it with it.
-			//
-			if ($depth == 0 && $this->name !== self::DEFAULT_CONFIG) {
-				try {
-					$root_directory = dirname($this->configPath);
-					$default_config = new Config(self::DEFAULT_CONFIG);
-					$this->data     = array_replace_recursive(
-						$default_config->build($root_directory)->data,
-						$this->data
-					);
-
-				} catch (Flourish\Exception $e){
-
-					//
-					// If we cannot merge the default data, we'll have to assume the non-default
-					// is complete.
-					//
-
-				}
-			}
-
-			return $this;
+			return $this->build();
 		}
 
 
@@ -273,7 +223,7 @@
 		 * @param ...
 		 * @return mixed The configuration element or default empty value if none is found
 		 */
-		public function get($typehint, $class = NULL, $element = NULL)
+		public function get($typehint = 'array', $class = NULL, $element = NULL)
 		{
 			$config = NULL;
 
@@ -295,28 +245,58 @@
 				$config = $this->data;
 			}
 
-			$type     = strtolower(gettype($config));
-			$typehint = strtolower($typehint);
-
-			if ($type != $typehint) {
-				switch ($typehint) {
-					case 'array':
-						return array();
-					case 'string':
-						return '';
-					case 'bool':
-					case 'boolean':
-						return FALSE;
-					case 'int':
-					case 'float':
-					case 'integer':
-						return 0;
-				}
-			}
-
-			return $config;
+			return self::normalize($config, $typehint);
 		}
 
+
+		/**
+		 * Gets config elements for configs matching a given type
+		 *
+		 * @access public
+		 * @param string $typehint The typehint for the configuration elements
+		 * @param string $type The config type to get configuration elements for
+		 * @param string $element The configuration element to get for each config
+		 * @param ...
+		 * @return array The config data for each config matching the type, keys are element ids
+		 */
+		public function getAllByType($typehint = 'array', $type = NULL, $element = NULL)
+		{
+			$type         = strtolower($type);
+			$data         = array();
+			$sub_elements = array_slice(func_get_args(), 2);
+
+			if ($type !== NULL) {
+
+				if ($type[0] = '@') {
+					$element_id        = $this->elementize($type);
+					$data[$element_id] = call_user_func_array([$this, 'get'], func_get_args());
+					$sub_elements      = array_slice(func_get_args(), 1);
+				}
+
+				if (isset($this->data[self::CONFIG_BY_TYPES_ELEMENT][$type])) {
+					$configs_by_type = $this->data[self::CONFIG_BY_TYPES_ELEMENT][$type];
+
+					foreach ($configs_by_type as $element_id => $config) {
+						foreach (array_slice(func_get_args(), 2) as $sub_element) {
+							if (isset($config[$sub_element])) {
+								$config = $config[$sub_element];
+							} else {
+								$config = NULL;
+							}
+						}
+
+						$data[$element_id] = self::normalize($config, $typehint);
+					}
+				}
+
+
+
+			} else {
+				$data = $this->data[self::CONFIG_BY_TYPES_ELEMENT];
+			}
+
+			return $data;
+		}
 
 		/**
 		 * Maps a class to an element ID using the config path
@@ -343,6 +323,7 @@
 			$this->elementTranslations[$element_id] = $class;
 		}
 
+
 		/**
 		 * Writes the configuration out to a cache file
 		 *
@@ -364,5 +345,95 @@
 					$file
 				);
 			}
+		}
+
+
+		/**
+		 * Build the configuration
+		 *
+		 * This will attempt to use a cached copy of the configuration if it exists.  If it does
+		 * not exist or is invalid, it will build from the provided directory.  To clear the
+		 * cached version, please see the reset() method.
+		 *
+		 * @access public
+		 *
+		 */
+		private function build($directory = NULL, $depth = 0)
+		{
+			$directory = $directory ?: $this->configPath;
+ 			$types_ref =& $this->data[self::CONFIG_BY_TYPES_ELEMENT];
+
+			//
+			// Loads each PHP file into a configuration element named after the file.
+			//
+
+			foreach (glob($directory . DS . '*.php') as $file) {
+
+				$config_path =  implode('/', array_slice(explode(DS, $file), ($depth + 1) * -1));
+				$element_id  =  self::generateElementId($config_path);
+				$current     =  include($file);
+
+				if (isset($current['data'])) {
+					$this->data[$element_id] = $current['data'];
+
+					if (isset($this->data[$element_id]['class'])) {
+						$this->map($this->data[$element_id]['class'], $element_id);
+					}
+				} else {
+					$this->data[$element_id] = array();
+				}
+
+				if (isset($current['types'])) {
+
+					settype($current['types'], 'array');
+
+					foreach ($current['types'] as $type) {
+						$type = strtolower($type);
+
+						if ($type == 'core') {
+							$config_name = '@' . str_replace('.php', '', $config_path);
+							$this->map($config_name, $config_path);
+						}
+
+						if (!isset($types_ref[$type])) {
+							$types_ref[$type] = array();
+						}
+
+						$types_ref[$type][$element_id] =& $this->data[$element_id];
+					}
+				}
+			}
+
+			//
+			// Ensures we recusively scan all directories and merge all configurations.
+			//
+
+			foreach (glob($directory . DS . '*', GLOB_ONLYDIR) as $directory) {
+				$this->build($directory, $depth + 1);
+			}
+
+			//
+			// Lastly, if this configuration name is not the default, merge it with it.
+			//
+			if ($depth == 0 && $this->name !== self::DEFAULT_CONFIG) {
+				try {
+					$root_directory = dirname($this->configPath);
+					$default_config = new Config(self::DEFAULT_CONFIG);
+					$this->data     = array_replace_recursive(
+						$default_config->build($root_directory)->data,
+						$this->data
+					);
+
+				} catch (Flourish\Exception $e){
+
+					//
+					// If we cannot merge the default data, we'll have to assume the non-default
+					// is complete.
+					//
+
+				}
+			}
+
+			return $this;
 		}
 	}

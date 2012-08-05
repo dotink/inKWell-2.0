@@ -1,6 +1,6 @@
-<?php
+<?php namespace Dotink\Inkwell;
 
-	return self::create('Library', array(
+	return Config::create(['Library', '@autoloading'], [
 
 		//
 		// The default response
@@ -18,8 +18,7 @@
 		// Each callback is rendered in the order in which it is defined.
 		//
 
-		'renderers' => array(
-		),
+		'renderers' => [],
 
 		//
 		// Responses are short name aliases for various response codes.  They should not include
@@ -27,7 +26,7 @@
 		// Controller::redirect().
 		//
 
-		'responses' => array(
+		'responses' => [
 
 			//
 			// For additional information about when each one of these response codes should be
@@ -36,72 +35,72 @@
 			// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
 			//
 
-			'ok' => array(
+			'ok' => [
 				'code' => 200,
 				'body' => NULL
-			),
+			],
 
-			'created' => array(
+			'created' => [
 				'code' => 201,
 				'body' => NULL
-			),
+			],
 
-			'accepted' => array(
+			'accepted' => [
 				'code' => 202,
 				'body' => NULL
-			),
+			],
 
-			'no_content' => array(
+			'no_content' => [
 				'code' => 204,
 				'body' => NULL
-			),
+			],
 
-			'bad_request' => array(
+			'bad_request' => [
 				'code' => 400,
 				'body' => 'The requested could not be understood'
-			),
+			],
 
-			'not_authorized' => array(
+			'not_authorized' => [
 				'code' => 401,
 				'body' => 'The requested resource requires authorization'
-			),
+			],
 
-			'forbidden' => array(
+			'forbidden' => [
 				'code' => 403,
 				'body' => 'You do not have permission to view the requested resource'
-			),
+			],
 
-			'not_found' => array(
+			'not_found' => [
 				'code' => 404,
 				'body' => 'The requested resource could not be found'
-			),
+			],
 
-			'not_allowed' => array(
+			'not_allowed' => [
 				'code' => 405,
 				'body' => 'The requested resource does not support this method'
-			),
+			],
 
-			'not_acceptable' => array(
+			'not_acceptable' => [
 				'code' => 406,
 				'body' => 'The requested resource is not available in the accepted parameters'
-			),
+			],
 
-			'internal_server_error' => array(
+			'internal_server_error' => [
 				'code' => 500,
 				'body' => 'The requested resource is not available due to an internal error'
-			),
+			],
 
-			'service_unavailable' => array(
+			'service_unavailable' => [
 				'code' => 503,
 				'body' => 'The requested resource is temporarily unavailable'
-			)
-		),
+			]
+		],
 
 		//
 		// Load supported response types from includes/lib/responses
 		//
 
-		'autoloaders' => array(
-			'Response*' => 'includes/lib/responses'
-		)
-	));
+		'@autoloading' => [
+			'map' => ['Response*' => 'includes/lib/responses']
+		]
+	]);

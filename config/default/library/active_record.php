@@ -1,6 +1,6 @@
-<?php
+<?php namespace Dotink\Inkwell;
 
-	return self::create('Library', array(
+	return Config::create('Library', array(
 
 		// Whether or not we should attempt to auto scaffold records using this class.
 

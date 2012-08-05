@@ -1,6 +1,6 @@
-<?php
+<?php namespace Dotink\Inkwell;
 
-	return self::create('Core', array(
+	return Config::create('Core', array(
 
 		// By default database support is disabled.  You should not set this to FALSE unless you
 		// configure at least one database below.
