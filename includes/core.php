@@ -1,6 +1,5 @@
 <?php namespace Dotink\Inkwell {
 
-
 	/**
 	 * IW is the core inKWell class.
 	 *

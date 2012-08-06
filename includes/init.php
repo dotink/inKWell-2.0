@@ -1,6 +1,4 @@
-<?php
-
-	namespace Dotink\Inkwell;
+<?php namespace Dotink\Inkwell {
 
 	include 'core.php';
 	include 'functions.php';
@@ -21,3 +19,4 @@
 	$config_dir  = NULL;
 
 	return $app->config($config_name, $config_dir);
+}
