@@ -5,9 +5,9 @@
 		// By default database support is disabled.  You should not set this to FALSE unless you
 		// configure at least one database below.
 
-		'disabled'  => TRUE,
+		'disabled' => TRUE,
 
-		'databases' => [
+		'connections' => [
 
 			// Multiple databases can be configured.  If database support is enabled above the
 			// default database is always 'default', but it is possible to add independent

@@ -93,9 +93,9 @@
 		static private function generateElementId($path)
 		{
 			$path = str_replace(DS, '/', $path);
-			$path = Flourish\Grammar::underscorize($path);
+			$path = new Flourish\Text($path);
 
-			return md5($path);
+			return md5($path->underscorize());
 		}
 
 		/**
