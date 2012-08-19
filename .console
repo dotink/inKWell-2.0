@@ -430,206 +430,11 @@
 			return FALSE;
 		}
 
-		foreach (($tokens = token_get_all($source)) as $i => $token) {
-
-			if (is_array($token)) {
-
-				if (
-					   $token[0] == T_INCLUDE
-					|| $token[0] == T_INCLUDE_ONCE
-					|| $token[0] == T_REQUIRE
-					|| $token[0] == T_REQUIRE_ONCE
-				) {
-
-					$collect = '';
-
-					$c = 1;
-
-					do {
-						$next_token = is_array($tokens[$i + $c])
-							? $tokens[$i + $c][1]
-							: $tokens[$i + $c];
-
-						$collect .= $next_token;
-						$c++;
-
-					} while($next_token !== ';');
-
-					$included_file = trim($collect, '() ;"\'');
-
-					if (!is_readable($included_file)) {
-						echo sprintf(
-							'Error: The file "%s" could not be read',
-							$included_file
-						) . PHP_EOL;
-						return FALSE;
-					} else {
-						ob_start();
-
-						if (!___check('?>' . file_get_contents($included_file))) {
-							echo sprintf(
-								'Included/Required File [%s] %s',
-								$file,
-								ob_get_clean()
-							);
-						} else {
-							ob_get_flush();
-						}
-
-						return FALSE;
-					}
-
-				} elseif ($token[0] == T_STRING) {
-
-					$t      = $token[1];
-					$method = NULL;
-
-					//
-					// Find the next non-whitespace token, and if it's not an ( or an {
-					// continue on.
-					//
-					$c = 1;
-
-					do {
-						$next_token = is_array($tokens[$i + $c])
-							? $tokens[$i + $c][0]
-							: $tokens[$i + $c];
-
-						$c++;
-					} while ($next_token == T_WHITESPACE);
-
-					//
-					// Next non-whitespace token was ( or { so now let's see what the previous
-					// non-whitespace token was.
-					//
-					$c = 1;
-
-					do {
-						$previous_token = is_array($tokens[$i - $c])
-							? $tokens[$i - $c][0]
-							: $tokens[$i - $c];
-
-						$c++;
-					} while($previous_token == T_WHITESPACE);
-
-					if ($next_token == '(') {
-
-						switch ($previous_token) {
-
-							case T_FUNCTION:
-							case T_OBJECT_OPERATOR:
-								//
-								// Safe cases
-								//
-								break;
-
-							case T_PAAMAYIM_NEKUDOTAYIM:
-
-								$t      = $tokens[$i - 2][1];
-								$method = $token[1];
-
-							case T_NEW:
-
-								if (in_array($t, array('self', 'static', 'parent'))) {
-									continue;
-								} elseif (!class_exists($t)) {
-									echo sprintf(
-										'Error: Class %s does not exist.',
-										$t
-									) . PHP_EOL;
-									return FALSE;
-								} elseif (!isset($method)) {
-									//
-									// No method set, so we're trying to instantiate.
-									//
-									$reflection = new ReflectionClass($t);
-									if (!$reflection->isInstantiable()) {
-										echo sprintf(
-											'Error: Cannot create %s, invalid or ' .
-											'non-public constructor.',
-											$t
-										) . PHP_EOL;
-										return FALSE;
-									}
-								} else {
-									//
-									// Method was set, so it's a static call
-									//
-									if(!method_exists($t, $method)) {
-										echo sprintf(
-											'Error: Method %s::%s does not exist.',
-											$t,
-											$method
-										) . PHP_EOL;
-										return FALSE;
-									} elseif (!is_callable(array($t, $method))) {
-										echo sprintf(
-											'Error: Method %s::%s is not callable.',
-											$t,
-											$method
-										) . PHP_EOL;
-										return FALSE;
-									}
-
-									$method = NULL;
-								}
-
-								break;
-
-							default:
-
-								$x      = 0;
-								$callee = array();
-
-								do {
-									if (is_string($t) && $t !== '(') {
-										$callee[] = $t;
-									} elseif ($t[0] == T_STRING || $t[0] == T_NS_SEPARATOR) {
-										$callee[] = $t[1];
-									} else {
-										break;
-									}
-
-									$x++;
-									if (!isset($tokens[$i - $x])) { break; }
-									$t = $tokens[$i - $x];
-
-								} while(TRUE);
-
-								$callee = array_reverse($callee);
-								$callee = trim(implode('', $callee));
-
-								while ($t[0] == T_WHITESPACE && isset($tokens[$i - $x])) {
-									$t = $tokens[$i - $x]; $x++;
-								}
-
-								switch ($t[0]) {
-									case T_NEW:
-										if (!class_exists($callee)) {
-											echo sprintf(
-												'Error: Class %s does not exist.',
-												$callee
-											) . PHP_EOL;
-											return FALSE;
-										}
-										break;
-
-									default:
-										if (!function_exists($callee)) {
-											echo sprintf(
-												'Error:  Function %s() does not exist.',
-												$callee
-											) . PHP_EOL;
-											return FALSE;
-										}
-										break;
-								}
-								break;
-						}
-					}
-				}
-			}
-		}
+		// TODO: The logic for this should be completely written in a cleaner fashion.  Things
+		// we would like to check for:
+		//
+		// - Non Existent Functions (must support namespaces)
+		// - Non Existent Classes (must support namespaces)
 
 		return TRUE;
 	}
@@ -652,9 +457,11 @@
 			echo                                                      PHP_EOL;
 			echo '   \u <database_name> [<database_role> = either]' . PHP_EOL;
 			echo PHP_EOL;
+
 		} else {
 			try {
 				$result = $db->query($sql);
+
 				foreach($result as $record) {
 					Flourish\Core::expose($record);
 				}
@@ -690,7 +497,13 @@
 	function ___clear_screen()
 	{
 		if (Flourish\Core::checkOS('windows')) {
+
+			//
+			// TODO: Figure out a way to clear the screen on windows that actually works
+			//
+
 			system('cls');
+
 		} else {
 			passthru('clear');
 		}

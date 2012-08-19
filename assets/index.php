@@ -1,6 +1,4 @@
-<?php
-
-	namespace Dotink\Inkwell;
+<?php namespace Dotink\Inkwell {
 
 	try {
 
@@ -43,14 +41,14 @@
 
 			$app = include($init);
 
-			$app->register('router', 'Dotink\Inkwell\Routes', function() {
-				return new Routes();
+			$app->register('routes', 'Dotink\Inkwell\Routes', function($links) {
+				return new Routes($links);
 			});
 
 			$response = $app->run(new Request());
-			$return   = Response::resolve($response)->send();
+			$status   = Response::resolve($response)->send();
 
-			exit($return);
+			exit($status);
 		});
 
 	} catch (Exception $e) {
@@ -65,3 +63,4 @@
 
 		exit(0);
 	}
+}

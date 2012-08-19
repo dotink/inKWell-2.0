@@ -13,8 +13,9 @@
 	 */
 
 	use Dotink\Flourish;
+	use Dotink\Interfaces;
 
-	class Request implements \Dotink\Interfaces\Inkwell
+	class Request implements Interfaces\Inkwell, Interfaces\Request
 	{
 		/**
 		 * The accept header of this request
@@ -787,6 +788,12 @@
 		}
 
 
+		public function getPath()
+		{
+			return $this->url->getPath();
+		}
+
+
 		/**
 		 * Gets a value from ::get() and passes it through Flourish\HTML::prepare()
 		 *
@@ -809,7 +816,7 @@
 		 * @param mixed $value The value to set
 		 * @return void
 		 */
-		static public function set($key, $value)
+		public function set($key, $value)
 		{
 			$tip =& $this->data;
 

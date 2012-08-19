@@ -29,6 +29,8 @@
 
 		const REGEX_ABSOLUTE_PATH      = '#^(/|\\\\|[a-z]:(\\\\|/)|\\\\|//)#i';
 
+		const ROUTES_INTERFACE         = 'Dotink\Interfaces\Routes';
+		const RESPONSE_INTERFACE       = 'Dotink\Interfaces\Response';
 
 		/**
 		 * Whether or not an app instance has been created somewhere
@@ -138,7 +140,8 @@
 			$class = ltrim($class, '\\');
 			$parts = explode('\\', $class);
 			$class = array_pop($parts);
-			$path  = implode(DS, array_map('Dotink\Flourish\Grammar::underscorize', $parts));
+			$path  = implode(DS, $parts);
+			$path  = (new Flourish\Text($path))->underscorize();
 
 			return $path . DS . $class . '.php';
 		}
@@ -337,7 +340,7 @@
 			//
 
 			$valid_execution_modes = ['development', 'production'];
-			$this->executionMode    = self::DEFAULT_EXECUTION_MODE;
+			$this->executionMode   = self::DEFAULT_EXECUTION_MODE;
 
 			if (isset($config['execution_mode'])) {
 				if (in_array($config['execution_mode'], $valid_execution_modes)) {
@@ -565,7 +568,12 @@
 
 					if (file_exists($include_file)) {
 
-						include $include_file;
+						if ($class == 'Dotink\Inkwell\Response') {
+							var_dump($include_file);
+							Flourish\Core::expose(Flourish\Core::backtrace());
+						}
+
+						include_once $include_file;
 
 						if (class_exists($class, FALSE)) {
 
@@ -678,10 +686,43 @@
 		 */
 		public function run($request)
 		{
-			//
-			// This method will be responsible for adding all configured routes
-			// to the router and then running it with the provided request
-			//
+			$global_routes      = $this['config']->get('array', '@routes');
+			$controller_configs = $this['config']->getAllByType('array', 'Controller');
+			$ordered_routes     = array();
+			$ordering_index     = array();
+
+			foreach ($controller_configs as $config) {
+				if (!isset($config['routes']) || !is_array($config['routes'])) {
+					continue;
+				}
+
+				$route_prefix = isset($config['base_url'])
+					? rtrim((string) $config['base_url'], '/')
+					: NULL;
+
+				foreach ($config['routes'] as $route => $target) {
+					$specificity = 0;
+
+					//
+					// TODO: Calculate specificity of $route
+					//
+
+					$ordering_index[$base_url . $route] = $target;
+					$ordered_routes[$base_url . $route] = $specificity;
+				}
+			}
+
+			asort($ordered_routes);
+
+			$routes = $this->create('routes', [self::ROUTES_INTERFACE], $global_routes);
+
+			foreach (array_keys($ordered_routes) as $route) {
+				$routes->link($route, $ordering_index[$route]);
+			}
+
+			$response = $routes->run($request);
+
+			return $response;
 		}
 
 

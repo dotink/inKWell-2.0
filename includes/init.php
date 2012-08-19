@@ -18,5 +18,11 @@
 	$config_name = isset($_SERVER['IW_CONFIG']) ? $_SERVER['IW_CONFIG'] : NULL;
 	$config_dir  = NULL;
 
-	return $app->config($config_name, $config_dir);
+	$app->config($config_name, $config_dir);
+
+	//
+	// We should always return the app itself
+	//
+
+	return $app;
 }

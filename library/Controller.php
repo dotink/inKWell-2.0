@@ -12,14 +12,82 @@
 	 */
 
 	use Dotink\Flourish;
+	use Dotink\Interfaces;
+	use Dotink\Traits;
 
-	class Controller implements \ArrayAccess
+	class Controller implements Interfaces\Inkwell, Interfaces\Controller
 	{
-		use \Dotink\Traits\PeerContainer;
+		//
+		// Add array access implementation for the "elements" property
+		//
 
-		public function __construct(Array $peers)
+		use Traits\Container;
+
+
+		/**
+		 *
+		 */
+		final public function __construct(Array $elements)
 		{
-			$this->peers = $peers;
+			$this->elements = $elements;
+		}
+
+
+		/**
+		 *
+		 */
+		protected function delete($accept_types, $route, $data)
+		{
+
+		}
+
+
+		/**
+		 *
+		 */
+		protected function get($accept_types, $route, $data)
+		{
+
+		}
+
+
+		/**
+		 *
+		 */
+		protected function post($accept_types, $route, $data)
+		{
+
+		}
+
+
+		/**
+		 *
+		 */
+		protected function put($accept_types, $route, $data)
+		{
+
+		}
+
+
+		/**
+		 *
+		 */
+		public function resolveError()
+		{
+			return $this->error;
+		}
+
+
+		/**
+		 *
+		 */
+		protected function triggerError($error = 'not_found')
+		{
+			$this->error = 'FU!';
+			throw new YieldException(
+				'Controller has yielded due to error %s',
+				$error
+			);
 		}
 	}
 }
