@@ -109,7 +109,7 @@
 		 * @param Callable $config_callback The configuration callback
 		 * @return IW A new instance of an inKWell application
 		 */
-		static public function init($root_directory)
+		static public function init($root_directory, $library_directory = 'library')
 		{
 			//
 			// Add some basic definitions if another app hasn't already
@@ -123,7 +123,7 @@
 				self::$appExists = TRUE;
 			}
 
-			return new self($root_directory);
+			return new self($root_directory, $library_directory);
 		}
 
 
@@ -173,10 +173,10 @@
 		 *
 		 * @access private
 		 * @param string $root_directory The root directory for the application
-		 * @param Callable $config_callback The configuration callback
+		 * @param string $library_directory The inKWell core library directory
 		 * @return void
 		 */
-		private function __construct($root_directory, Callable $config_callback = NULL)
+		private function __construct($root_directory, $library_directory)
 		{
 			//
 			// Set our application root
@@ -189,11 +189,11 @@
 			// meaning that namespaces will be ignored when loading the classes.
 			//
 
-			$this->loaders['Dotink\Flourish\*']   = 'library/flourish';
-			$this->loaders['Dotink\Inkwell\*']    = 'library';
+			$this->loaders['Dotink\Flourish\*']   = $library_directory . DS . 'flourish';
+			$this->loaders['Dotink\Inkwell\*']    = $library_directory;
 
-			$this->loaders['Dotink\Interfaces\*'] = 'library/interfaces';
-			$this->loaders['Dotink\Traits\*']     = 'library/traits';
+			$this->loaders['Dotink\Interfaces\*'] = $library_directory . DS . 'interfaces';
+			$this->loaders['Dotink\Traits\*']     = $library_directory . DS . 'traits';
 
 			spl_autoload_register([$this, 'loadClass']);
 		}
@@ -747,6 +747,8 @@
 					$root_directory
 				);
 			}
+
+			return $this->roots[$key];
 		}
 
 

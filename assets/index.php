@@ -35,17 +35,19 @@
 			// Boostrap!
 			//
 
-			if (!is_readable($init = $include_directory . DIRECTORY_SEPARATOR . 'init.php')) {
+			$init    = $include_directory . DIRECTORY_SEPARATOR . 'init.php';
+			$routing = $include_directory . DIRECTORY_SEPARATOR . 'routing.php';
+
+			if (!is_readable($init) {
 				throw new \Exception('Unable to include inititialization file.');
 			}
 
-			$app = include($init);
+			if (!is_readable($routing)) {
+				throw new \Exception('Unable to include routing file.');
+			}
 
-			$app->register('routes', 'Dotink\Inkwell\Routes', function($links) {
-				return new Routes($links);
-			});
-
-			$response = $app->run(new Request());
+			$app      = include($init);
+			$response = include($routing);
 			$status   = Response::resolve($response)->send();
 
 			exit($status);
