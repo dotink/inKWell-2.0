@@ -1,5 +1,5 @@
-<?php namespace Dotink\Interfaces {
-
+<?php namespace Dotink\Interfaces
+{
 	/**
 	 * The Dotink Response interface
 	 *

@@ -1,5 +1,5 @@
-<?php namespace Dotink\Interfaces {
-
+<?php namespace Dotink\Interfaces
+{
 	/**
 	 * The Inkwell interface is a psuedo interface that requires no methods to be implemented,
 	 * however, is used to suggest that various logic should look for any of inKWell's magic

@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	/**
 	 * Response Class
 	 *
@@ -470,7 +470,7 @@
 			// however, is exactly the same.
 			//
 
-			header(!iw::checkSAPI('cgi-fcgi')
+			header(!Flourish\Core::checkSAPI('cgi-fcgi')
 				? sprintf('%s %d %s', $_SERVER['SERVER_PROTOCOL'], $this->code, $this->status)
 				: sprintf('Status: %d %s', $this->code, $this->status)
 			);

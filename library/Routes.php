@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	/**
 	 * Routes class responsible for mapping request paths to logic.
 	 *
@@ -17,28 +17,45 @@
 	class Routes implements Interfaces\Routes
 	{
 		const CONTROLLER_INTERFACE = 'Dotink\Interfaces\Controller';
+		const REGEX_TOKEN          = '/\[[^\]]*\]/';
+
+
+		/**
+		 * A list of regex patterns for various pattern tokens
+		 *
+		 * @static
+		 * @access private
+		 * @var array
+		 */
+		static private $patterns = [
+			'#' => '([-]?(?:[0-9]+))',
+			'%' => '([-]?[0-9]+\.[0-9]+',
+			'!' => '([^/]*)',
+			'$' => '([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)',
+			'*' => '(.*)'
+		];
 
 
 		/**
 		 * The current action controller
 		 *
 		 * @access private
-		 * @var Dotink\Interfaces\Controller
+		 * @var Interfaces\Controller
 		 */
-		private $actionController = NULL;
+		private $controller = NULL;
 
 
 		/**
-		 * A list of errors encountered when running
+		 * A list of errors, warnings, and notices encountered when running
 		 *
 		 * @access private
 		 * @var array
 		 */
-		private $errors = array();
+		private $log = array();
 
 
 		/**
-		 * A list of links (routes => actions)
+		 * A list of links mapping route patterns to route information
 		 *
 		 * @access private
 		 * @var array
@@ -47,14 +64,137 @@
 
 
 		/**
-		 * Triggers a general ContinueException
+		 * A list of redirects mapping route patterns to redirect information
+		 *
+		 * @access private
+		 * @var array
+		 */
+		private $redirects = array();
+
+
+		/**
+		 * Compiles a route, replacing valid tokens with match patterns
 		 *
 		 * @static
 		 * @access private
+		 * @param string $route The route to compile
+		 * @return array An array containing the final compiled pattern and parameter names
+		 */
+		static private function compile($route)
+		{
+			$params = array();
+
+			if (preg_match_all(self::REGEX_TOKEN, $route, $matches)) {
+				foreach ($matches[0] as $i => $token) {
+					$holder = '%TOKEN' . $i . '%';
+					$route  = str_replace($token, $holder, $route);
+				}
+
+				$route = preg_quote($route, '#');
+
+				foreach ($matches[0] as $i => $token) {
+					$split_pos = strrpos($token, ':');
+					$params[]  = trim(substr($token, $split_pos + 1, -1));
+					$pattern   = trim(substr($token, 1, $split_pos - 1));
+					$holder    = '%TOKEN' . $i . '%';
+
+					if (isset(self::$patterns[$pattern])) {
+						$route = str_replace($holder, self::$patterns[$pattern], $route);
+					} elseif ($pattern[0] == '(' && $pattern[strlen($pattern) - 1] == ')') {
+						$route = str_replace($holder, $pattern, $route);
+					} else {
+						throw new Flourish\ProgrammerException(
+							'Invalid complitation pattern %s',
+							$pattern
+						);
+					}
+				}
+			}
+
+			return [$route, $params];
+		}
+
+
+		/**
+		 * Decompiles a route, replacing valid tokens with parameter values
+		 *
+		 * @static
+		 * @access private
+		 * @param string $route The route to decompile
+		 * @param array $params An associative array of param names => values
+		 * @param array $remainder The unused params
+		 * @return string The decompiled route
+		 */
+		static private function decompile($route, $params, &$remainder = array())
+		{
+			$remainder = $params;
+
+			if (preg_match_all(self::REGEX_TOKEN, $route, $matches)) {
+				foreach ($matches[0] as $token) {
+					$split_pos = strrpos($token, ':');
+
+					if ($split_pos !== FALSE) {
+						$param     = trim(substr($token, $split_pos + 1, -1));
+						$transform = trim(substr($token, 1, $split_pos - 1));
+					} else {
+						$param     = trim($token, '[ ]');
+						$transform = NULL;
+					}
+
+					if (!isset($params[$param])) {
+						throw new Flourish\ProgrammerException(
+							'Missing parameter %s in supplied parameters',
+							$param
+						);
+					}
+
+					$value = $params[$param];
+
+					switch ($transform) {
+						case NULL:
+							break;
+						case 'uc':
+							$value = (new Flourish\Text($value))->camelize(TRUE);
+							var_dump($value);
+							break;
+						case 'lc':
+							$value = (new Flourish\Text($value))->camelize();
+							break;
+						case 'us':
+							$value = (new Flourish\Text($value))->underscorize();
+							break;
+						default:
+							throw new Flourish\ProgrammerException(
+								'Invalid decompilation transformation type %s',
+								$transform
+							);
+					}
+
+					$route = str_replace($token, $value, $route);
+					unset($remainder[$param]);
+				}
+			}
+
+			return $route;
+		}
+
+
+		/**
+		 * Triggers a general ContinueException and logs the message passed
+		 *
+		 * @static
+		 * @access private
+		 * @param string $message An sprintf style message
+		 * @param mixed $component A component of the message
+		 * @param ...
 		 * @return void
 		 */
-		static private function triggerContinue()
+		static private function triggerContinue($message, $component)
 		{
+			$components  = func_get_args();
+			$message     = array_shift($components);
+			$this->log[] = vsprintf('Continue: ' . $message, $components);
+
 			throw new Flourish\ContinueException(
 				'Error running route, continuing...'
 			);
@@ -65,38 +205,130 @@
 		 * Construct a routes collection
 		 *
 		 * @access public
-		 * @param array $links The links to add to the collection
 		 * @return void
 		 */
-		public function __construct(Array $links = [])
+		public function __construct()
 		{
-			$this->links = $links;
+
 		}
 
 
 		/**
-		 * Add a link to the routes collection
+		 * Composes a route from various components, taking redirects into account
 		 *
-		 * A link is only added if an existing link for the specified route does not exist
+		 * @access public
+		 * @param string $route The route to compose
+		 * @param array $components A list of components mapping param name => value
+		 * @return string The URL with route tokens replaced by respective components
+		 */
+		public function compose($route, $components)
+		{
+			$url = self::decompile($route, $components);
+
+			while ($this->translate($url) !== FALSE);
+			return $url;
+		}
+
+
+		/**
+		 * Links a route to an action in the routes collection
+		 *
+		 * If an existing link matches matches the same compiled pattern then the action is
+		 * checked for compatibility.  In short, closures are never compatible, strings callables
+		 * that match are OK, and array callables that match are OK.
 		 *
 		 * @access public
 		 * @param string $route The route key/mapping
-		 * @param Closure|string $action The action to execute, callback strings are custom
+		 * @param callable $action The action to execute, callback strings are custom
 		 * @return void
+		 * @throws Flourish\ProgrammerException in the case of conflicting routes
 		 */
 		public function link($route, $action)
 		{
-			if (!isset($this->links[route])) {
-				$this->links[$route] = $action;
+			list($pattern, $params) = self::compile($route);
+
+			if (isset($this->links[$pattern])) {
+
+				$existing_action = $this->links[$pattern]['action'];
+
+				if (is_string($existing_action)) {
+					if (!is_string($action) || $existing_action != $action) {
+						throw new Flourish\ProgrammerException(
+							'Cannot add conflicting route %s, conflicting action %s',
+							$route,
+							$action
+						);
+					}
+				} elseif (is_array($existing_action)) {
+					if (!is_array($action) || (object) $existing_action != (object) $action) {
+						throw new Flourish\ProgrammerException(
+							'Cannot add conflicting route %s, incompatible object callback',
+							$route
+						);
+					}
+				} elseif (is_closure($existing_action)) {
+					throw new Flourish\ProgrammerException(
+						'Cannot add conflicting route %s, action is a closure',
+						$route
+					);
+				}
 			}
+
+			$this->links[$pattern] = [
+				'action' => $action,
+				'params' => $params,
+				'route'  => $route
+			];
+		}
+
+
+		/**
+		 * Redirects a route to a translation in the routes collection
+		 *
+		 * @access public
+		 * @param string $route The route key/mapping
+		 * @param string $translation The translation to map to
+		 * @param integer $type The type of redirect (301, 303, 307, etc...)
+		 * @return void
+		 * @throws Flourish\ProgrammerException in the case of conflicting routes
+		 */
+		public function redirect($route, $translation, $type = 301)
+		{
+			list($pattern, $params) = self::compile($route);
+
+			if (isset($this->redirects[$pattern])) {
+
+				$existing_translation = $this->redirects[$pattern]['translation'];
+
+				if ($type != $existing_type) {
+					throw new Flourish\ProgrammerException(
+						'Cannot add conflicting redirect %s, incompatible type %s',
+						$route,
+						$type
+					);
+				} elseif ($translation != $existing_translation) {
+					throw new Flourish\ProgrammerException(
+						'Cannot add conflicting redirect %s, incompatible translation %s',
+						$route,
+						$translation
+					);
+				}
+			}
+
+			$this->redirects[$pattern] = [
+				'route'       => $route,
+				'translation' => $translation,
+				'params'      => $params,
+				'type'        => $type
+			];
 		}
 
 
 		/**
 		 * "Runs" the routes collection relative to a provided request
 		 *
-		 * This iterates over all available links in the routes collection and attempts to match
-		 * the path of the request object against each link's route.  If a match is found it will
+		 * This iterates over all available links in the collection and attempts to match the path
+		 * of the request object against each link's compild pattern.  If a match is found it will
 		 * attempt to dispatch to the linked action.
 		 *
 		 * @access public
@@ -105,21 +337,42 @@
 		 */
 		public function run(Interfaces\Request $request)
 		{
-			$request_uri  = $request->getPath();
-			$this->errors = array();
+			$this->errors  = array();
+			$request_uri   = $request->getPath();
+			$redirect_type = $this->translate($request_uri);
 
-			foreach ($this->links as $route => $action) {
+			if ($redirect_type !== FALSE) {
+				$request->redirect($request_uri, $redirect_type);
+			}
+
+			foreach ($this->links as $pattern => $link) {
 				try {
-					$this->actionController = NULL;
 
-					if ($request_uri == $route) {
+					$this->controller = NULL;
+					$old_get          = $_GET;
+
+					if (preg_match('#^' . $pattern . '$#', $request_uri, $matches)) {
+						array_shift($matches);
+
+						$route  = $link['route'];
+						$params = array_combine($link['params'], $matches);
+						$action = is_string($link['action'])
+							? self::decompile($link['action'], $params, $params)
+							: $link['action'];
+
+						$_GET     = array_merge($_GET, $params);
 						$response = $this->dispatch($request, $route, $action);
 					}
+
 				} catch (ContinueException $e) {
+					$_GET = $old_get;
 					continue;
+
 				} catch (YieldException $e) {
-					if (isset($this->actionController)) {
-						$response = $this->actionController->getError();
+					$_GET = $old_get;
+
+					if (isset($this->controller)) {
+						$response = $this->controller->getError();
 					} else {
 						$response = $e->getMessage();
 					}
@@ -136,109 +389,124 @@
 		 *
 		 * @access private
 		 * @param Request $request The request
-		 * @param string $route The route we are dispatching
-		 * @param Closure|string $action The action to execute
+		 * @param string The original route
+		 * @param callable $action The action we're dispatching to
 		 * @return mixed The response of the action
 		 */
 		private function dispatch($request, $route, $action)
 		{
-			$action_elements = [
-				'routes'  => $this,
-				'request' => $request
-			];
+			var_dump($action);
+			var_dump($_GET);
+			exit();
 
 			if ($action instanceof \Closure) {
+
 				//
 				// Call Closures directly
 				//
 
-				return $action($action_elements);
+				return $action(['request' => $request, 'routes'  => $this]);
 
 			} elseif (is_string($action)) {
+
 				//
 				// Strings are either direct function calls or parseable object callbacks
 				//
 
 				if (strpos('::', $action) === FALSE) {
 					if (!is_callable($action)) {
-						$this->errors[] = sprintf(
-							'Action "%s" is not callable',
+						self::triggerContinue(
+							'Action "%s" is not callable: Skipping',
 							$action
 						);
-
-						self::triggerContinue();
 					}
 
-					return call_user_func($action);
+					ob_start();
+					$response = call_user_func($action);
+					$output   = ob_get_clean();
+
+					return $output ? $output : $response;
 				}
 
 				list($action_class, $action_method) = self::parseAction($action);
 
 				if (!class_exists($action_class)) {
-					$this->errors[] = sprintf(
-						'Action class "%s" does not exist',
+					self::triggerContinue(
+						'Action class "%s" does not exist: Skipping',
 						$action_class
 					);
-
-					self::triggerContinue();
 				}
 
 				if (!in_array(self::CONTROLLER_INTERFACE, class_implements($action_class))) {
-					$this->errors[] = sprintf(
+					self::triggerContinue(
 						'Action class "%s" does not implement %s',
 						$action_class,
 						self::CONTROLLER_INTERFACE
 					);
-
-					self::triggerContinue();
 				}
 
 				if (strpos('__', $action_method) === 0) {
-					$this->errors[] = sprintf(
+					self::triggerContinue(
 						'Action method "%s" cannot be a magic method',
 						$action_method
 					);
-
-					self::triggerContinue();
 				}
 
 				if (!method_exists($action_class, $action_method)) {
-					$this->errors[] = sprintf(
+					self::triggerContinue(
 						'Action method "%s" does not exist for class %s',
 						$action_method,
 						$action_class
 					);
-
-					self::triggerContinue();
 				}
 
-				$this->actionController = new $action_class($action_elements);
+				$this->controller = new $action_class(['request' => $request, 'routes'  => $this]);
 
 				if (!is_callable([$controller, $action_method])) {
-					$this->errors[] = sprintf(
+					self::triggerContinue(
 						'Action method "%s" is not callable on object of class %s',
 						$action_method,
 						$action_class
 					);
-
-					self::triggerContinue();
 				}
 
-				return $this->actionController->$action_method();
+				return $this->controller->$action_method();
 
 			} else {
+
 				//
 				// Invalid action type
 				//
 
-				$this->errors[] = sprintf(
+				self::triggerContinue(
 					'Invalid action "%s" for route %s',
 					$action,
 					$route
 				);
-
-				self::triggerContinue();
 			}
+		}
+
+		/**
+		 * Translates a url from the available redirects
+		 *
+		 * @access private
+		 * @param sring $url The URL to translate
+		 * @return integer|boolean The type of redirect that should occur, FALSE if none
+		 */
+		private function translate(&$url)
+		{
+			foreach ($this->redirects as $pattern => $redirect) {
+				if (preg_match('#^' . $pattern . '$#', $url, $matches)) {
+					array_shift($matches);
+
+					$params = array_combine($redirect['params'], $matches);
+					$url    = self::decompile($redirect['translation'], $params);
+
+					return $redirect['type'];
+				}
+			}
+
+			return FALSE;
 		}
 	}
 }

@@ -113,13 +113,13 @@
 				}
 			}
 
-			require implode(DS, array(
+			$response = require implode(DIRECTORY_SEPARATOR, array(
 				APPLICATION_ROOT,
 				'includes',
 				'routing.php'
 			));
 
-			Response::resolve(Moor::run())->send();
+			Inkwell\Response::resolve($response)->send();
 
 			exit(0);
 		}

@@ -1,6 +1,7 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	include 'core.php';
+	include 'constants.php';
 	include 'functions.php';
 
 	$app = IW::init(realpath(dirname(__DIR__)));

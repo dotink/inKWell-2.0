@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	/**
 	 * Request class responsible for creating / executing requests.
 	 *
@@ -72,6 +72,15 @@
 
 
 		/**
+		 * The  protocol for the request
+		 *
+		 * @access private
+		 * @var string
+		 */
+		private $protocol = NULL;
+
+
+		/**
 		 * The request URL
 		 *
 		 * @access private
@@ -89,15 +98,7 @@
 		 */
 		static public function __init($app, $config, $element)
 		{
-			//
-			// Create some nice looking constants for request methods
-			//
-
-			foreach (['GET', 'PUT', 'POST', 'DELETE', 'HEAD'] as $method) {
-				if (@!constant(__NAMESPACE__ . '\\' . $method)) {
-					define(__NAMESPACE__ . '\\' . $method, strtolower($method));
-				}
-			}
+			return TRUE;
 		}
 
 
@@ -388,12 +389,26 @@
 
 
 		/**
+		 * Construct a new request.  Empty arguments are pulled from the current request.
 		 *
+		 * @access public
+		 * @param string $method The method, e.g. get, put, post, etc...
+		 * @param string $accept A valid HTTP Accept string for requesting content type
+		 * @param string|Flourish\URL $url The URL for the request
+		 * @param string|array $data A query string or array to pull data from
+		 * @return void
 		 */
-		public function __construct($method = NULL, $accept = NULL, $url = NULL, $data = NULL) {
-
-			$valid_methods = ['get', 'put', 'post', 'delete', 'head'];
-			$this->method  = strtolower(!$method ? $_SERVER['REQUEST_METHOD'] : $method);
+		public function __construct($method = NULL, $accept = NULL, $url = NULL, $data = NULL)
+		{
+			$valid_methods  = [GET, POST, PUT, DELETE, HEAD];
+			$this->method   = strtolower(!$method ? $_SERVER['REQUEST_METHOD'] : $method);
+			$this->accept   = $accept;
+			$this->url      = new Flourish\URL($url);
+			$this->data     = array();
+			$this->files    = $_FILES;
+			$this->protocol = isset($_SERVER['SERVER_PROTOCOL'])
+				? $_SERVER['SERVER_PROTOCOL']
+				: 'HTTP/1.1';
 
 			if (!in_array($this->method, $valid_methods)) {
 				throw new Flourish\ValidationException(
@@ -402,11 +417,6 @@
 					join(', ', $valid_methods)
 				);
 			}
-
-			$this->data   = array();
-			$this->accept = $accept;
-			$this->files  = $_FILES;
-			$this->url    = new Flourish\URL($url);
 
 			if (!$this->accept && isset($_SERVER['HTTP_ACCEPT'])) {
 				$this->accept = $_SERVER['HTTP_ACCEPT'];
@@ -419,13 +429,16 @@
 			if ($data == NULL) {
 				if ($this->checkMethod(GET)) {
 					$this->data == $_GET;
-				} elseif ($this->checkMethod(POST)) {
+				} else{
 					$this->data = array_replace_recursive($_GET, $_POST);
-				} elseif ($this->checkMethod(PUT) || $this->checkMethod(DELETE)) {
-					parse_str(file_get_contents('php://input'), $input_data);
 
-					$this->data = array_replace_recursive($_GET, $input_data);
+					if ($this->checkMethod(PUT) || $this->checkMethod(DELETE)) {
+						parse_str(file_get_contents('php://input'), $input_data);
+
+						$this->data = array_replace_recursive($this->data, $input_data);
+					}
 				}
+
 			} else {
 				if (is_string($data)) {
 					parse_str($data, $this->data);
@@ -497,9 +510,7 @@
 		 */
 		public function checkMethod($method)
 		{
-			$method = strtolower($method);
-
-			return $method == $this->method;
+			return strtolower($method) == $this->method;
 		}
 
 		/**
@@ -752,6 +763,7 @@
 		 *  - If `$filter` contains two or more values, and two of the values have the same `q`
 		 *    value, the one listed first in `$filter` will be returned
 		 *
+		 * @access public
 		 * @param array|string $filter Acceptable type(s)
 		 * @param string ...
 		 * @return string|NULL|FALSE The best type listed in the `Accept` header
@@ -769,11 +781,12 @@
 		/**
 		 * Gets a value from the request data, restricting to a specific set of values
 		 *
+		 * @access public
 		 * @param string $key The key to get - array elements can be accessed via `[sub-key]`
 		 * @param array $valid_values The values that are permissible, the first will act as default
 		 * @return mixed The value
 		 */
-		static public function getValid($key, $valid_values)
+		public function getValid($key, $valid_values)
 		{
 			settype($valid_values, 'array');
 
@@ -788,6 +801,12 @@
 		}
 
 
+		/**
+		 * Gets the path of the request URL
+		 *
+		 * @access public
+		 * @return string The path of the request URL
+		 */
 		public function getPath()
 		{
 			return $this->url->getPath();
@@ -807,6 +826,45 @@
 			return Flourish\HTML::prepare($this->get($key, $cast_to, $default_value));
 		}
 
+
+		/**
+		 *
+		 */
+		public function redirect($url = NULL, $type = 303)
+		{
+			$this->url = $this->url->modify($url);
+
+			if ($this->protocol == 'HTTP/1.0') {
+				switch ($type) {
+					case 301:
+						header('HTTP/1.0 Moved Permanently');
+						break;
+					case 302:
+					case 303:
+					case 307:
+						header('HTTP/1.0 302 Moved Temporarily');
+						break;
+				}
+			} elseif ($this->protocol == 'HTTP/1.1') {
+				switch ($type) {
+					case 301:
+						header('HTTP/1.1 Moved Permanently');
+						break;
+					case 302:
+						header('HTTP/1.1 302 Found');
+						break;
+					case 303:
+						header('HTTP/1.1 303 See Other');
+						break;
+					case 307:
+						header('HTTP/1.1 307 Temporary Redirect');
+						break;
+				}
+			}
+
+			header('Location: ' . $this->url);
+			exit(0);
+		}
 
 		/**
 		 * Sets a value into the request data

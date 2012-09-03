@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	/**
 	 * Config class responsible for building and representing configuration information as well
 	 * as providing accessor methods to query the configuration.

@@ -38,7 +38,7 @@
 			$init    = $include_directory . DIRECTORY_SEPARATOR . 'init.php';
 			$routing = $include_directory . DIRECTORY_SEPARATOR . 'routing.php';
 
-			if (!is_readable($init) {
+			if (!is_readable($init)) {
 				throw new \Exception('Unable to include inititialization file.');
 			}
 

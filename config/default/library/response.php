@@ -97,11 +97,11 @@
 		],
 
 		//
-		// Load supported response types from includes/lib/responses
+		// Load supported response types from user/responses
 		//
 
 		'@autoloading' => [
-			'map' => ['Response*' => 'includes/lib/responses']
+			'map' => ['*\Response*' => 'user/responses']
 		]
 	]);
 }

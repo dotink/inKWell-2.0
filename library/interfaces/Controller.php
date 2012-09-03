@@ -1,5 +1,5 @@
-<?php namespace Dotink\Interfaces {
-
+<?php namespace Dotink\Interfaces
+{
 	/**
 	 * The Dotink Controller interface
 	 *
@@ -13,6 +13,6 @@
 
 	interface Controller extends \ArrayAccess
 	{
-
+		public function getError();
 	}
 }

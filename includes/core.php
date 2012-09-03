@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	/**
 	 * IW is the core inKWell class.
 	 *
@@ -17,9 +17,6 @@
 
 	class IW implements \ArrayAccess
 	{
-		const LB                       = PHP_EOL;
-		const DS                       = DIRECTORY_SEPARATOR;
-
 		const INITIALIZATION_METHOD    = '__init';
 		const MATCH_CLASS_METHOD       = '__match';
 
@@ -27,18 +24,8 @@
 		const DEFAULT_WRITE_DIRECTORY  = 'assets';
 		const DEFAULT_EXECUTION_MODE   = 'development';
 
-		const REGEX_ABSOLUTE_PATH      = '#^(/|\\\\|[a-z]:(\\\\|/)|\\\\|//)#i';
-
 		const ROUTES_INTERFACE         = 'Dotink\Interfaces\Routes';
 		const RESPONSE_INTERFACE       = 'Dotink\Interfaces\Response';
-
-		/**
-		 * Whether or not an app instance has been created somewhere
-		 *
-		 * @access private
-		 * @var boolean
-		 */
-		static private $appExists = FALSE;
 
 		/**
 		 * Child objects of the application; accessible via array access
@@ -111,18 +98,6 @@
 		 */
 		static public function init($root_directory, $library_directory = 'library')
 		{
-			//
-			// Add some basic definitions if another app hasn't already
-			//
-
-			if (!self::$appExists) {
-				define(__NAMESPACE__ . '\\' . 'DS', self::DS);
-				define(__NAMESPACE__ . '\\' . 'LB', self::LB);
-				define(__NAMESPACE__ . '\\' . 'REGEX_ABSOLUTE_PATH', self::REGEX_ABSOLUTE_PATH);
-
-				self::$appExists = TRUE;
-			}
-
 			return new self($root_directory, $library_directory);
 		}
 
@@ -189,9 +164,8 @@
 			// meaning that namespaces will be ignored when loading the classes.
 			//
 
-			$this->loaders['Dotink\Flourish\*']   = $library_directory . DS . 'flourish';
 			$this->loaders['Dotink\Inkwell\*']    = $library_directory;
-
+			$this->loaders['Dotink\Flourish\*']   = $library_directory . DS . 'flourish';
 			$this->loaders['Dotink\Interfaces\*'] = $library_directory . DS . 'interfaces';
 			$this->loaders['Dotink\Traits\*']     = $library_directory . DS . 'traits';
 
@@ -508,7 +482,7 @@
 
 			try {
 				if (call_user_func($init_callback, $this, $class_config, $element_id)) {
-					self::$initializedClasses[] = $class;
+					$this->initializedClasses[] = $class;
 					return TRUE;
 				}
 			} catch (Flourish\Exception $e) {}
@@ -567,11 +541,6 @@
 					$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
 
 					if (file_exists($include_file)) {
-
-						if ($class == 'Dotink\Inkwell\Response') {
-							var_dump($include_file);
-							Flourish\Core::expose(Flourish\Core::backtrace());
-						}
 
 						include_once $include_file;
 
@@ -686,38 +655,22 @@
 		 */
 		public function run($request)
 		{
-			$global_routes      = $this['config']->get('array', '@routes');
-			$controller_configs = $this['config']->getAllByType('array', 'Controller');
-			$ordered_routes     = array();
-			$ordering_index     = array();
+			$redirect_configs = $this['config']->getAllByType('array', '@redirects');
+			$route_configs    = $this['config']->getAllByType('array', '@routes');
+			$routes           = $this->create('routes', [self::ROUTES_INTERFACE]);
 
-			foreach ($controller_configs as $config) {
-				if (!isset($config['routes']) || !is_array($config['routes'])) {
-					continue;
-				}
-
-				$route_prefix = isset($config['base_url'])
-					? rtrim((string) $config['base_url'], '/')
-					: NULL;
-
-				foreach ($config['routes'] as $route => $target) {
-					$specificity = 0;
-
-					//
-					// TODO: Calculate specificity of $route
-					//
-
-					$ordering_index[$base_url . $route] = $target;
-					$ordered_routes[$base_url . $route] = $specificity;
+			foreach ($redirect_configs as $config) {
+				foreach ($config as $type => $redirects) {
+					foreach ($redirects as $route => $translation) {
+						$routes->redirect($route, $translation, $type);
+					}
 				}
 			}
 
-			asort($ordered_routes);
-
-			$routes = $this->create('routes', [self::ROUTES_INTERFACE], $global_routes);
-
-			foreach (array_keys($ordered_routes) as $route) {
-				$routes->link($route, $ordering_index[$route]);
+			foreach ($route_configs as $config) {
+				foreach ($config as $route => $action) {
+					$routes->link($route, $action);
+				}
 			}
 
 			$response = $routes->run($request);

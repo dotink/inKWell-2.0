@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	/**
 	 *
 	 *
@@ -36,43 +36,7 @@
 		/**
 		 *
 		 */
-		protected function delete($accept_types, $route, $data)
-		{
-
-		}
-
-
-		/**
-		 *
-		 */
-		protected function get($accept_types, $route, $data)
-		{
-
-		}
-
-
-		/**
-		 *
-		 */
-		protected function post($accept_types, $route, $data)
-		{
-
-		}
-
-
-		/**
-		 *
-		 */
-		protected function put($accept_types, $route, $data)
-		{
-
-		}
-
-
-		/**
-		 *
-		 */
-		public function resolveError()
+		public function getError()
 		{
 			return $this->error;
 		}
@@ -84,8 +48,8 @@
 		protected function triggerError($error = 'not_found')
 		{
 			$this->error = 'FU!';
-			throw new YieldException(
-				'Controller has yielded due to error %s',
+			throw new Flourish\YieldException(
+				'Controller has yielded due to error: %s',
 				$error
 			);
 		}
