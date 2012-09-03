@@ -91,10 +91,10 @@ or the application logic itself such as SQL schemas, docs, tests, etc.
 
 #### Default Subdirectories
 
+- databases : Database schemas and migrations
 - docs : inKWell Documentation
-- sql : Database schemas and migrations
-- tests : Unit test framework and tests
-- utils : inKWell toolchain
+- testing : Unit test framework and tests
+- utililities : inKWell toolchain
 
 #### Definition
 
