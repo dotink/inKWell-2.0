@@ -4,13 +4,13 @@ The directory structure in inKWell is designed to promote modularity, re-usabili
 of code.  In addition, each directory's existence is justified with very specific logic.  That
 said, feel free to change whatever you like... it's really easy!
 
-## Root Directories
+### Root Directories
 
 Root directories in inKWell (yes there's more than one), are nodal points which define specific
 patterns when the system is looking for particular types of resources.  These directories are
 added to the application instance and can be retrieve using the `getRoot()` method.
 
-```php
+```
 [/home/matts/inkwell][01]# echo $app->getRoot('config');
 /home/matts/inkwell/config
 ```
@@ -27,7 +27,7 @@ It is also quite common to see that directories in inKWell are relative to these
 example, looking at the controller configuration in `config/default/library/controller.php` we
 can see the following:
 
-```
+```php
 'root_directory' => 'user/controllers'
 ```
 
