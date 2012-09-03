@@ -154,14 +154,14 @@
 						case NULL:
 							break;
 						case 'uc':
-							$value = (new Flourish\Text($value))->camelize(TRUE);
+							$value = Flourish\Text::create($value)->camelize(TRUE);
 							var_dump($value);
 							break;
 						case 'lc':
-							$value = (new Flourish\Text($value))->camelize();
+							$value = Flourish\Text::create($value)->camelize();
 							break;
 						case 'us':
-							$value = (new Flourish\Text($value))->underscorize();
+							$value = Flourish\Text::create($value)->underscorize();
 							break;
 						default:
 							throw new Flourish\ProgrammerException(
@@ -364,11 +364,11 @@
 						$response = $this->dispatch($request, $route, $action);
 					}
 
-				} catch (ContinueException $e) {
+				} catch (Flourish\ContinueException $e) {
 					$_GET = $old_get;
 					continue;
 
-				} catch (YieldException $e) {
+				} catch (Flourish\YieldException $e) {
 					$_GET = $old_get;
 
 					if (isset($this->controller)) {
