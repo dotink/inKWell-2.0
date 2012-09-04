@@ -155,7 +155,6 @@
 							break;
 						case 'uc':
 							$value = Flourish\Text::create($value)->camelize(TRUE);
-							var_dump($value);
 							break;
 						case 'lc':
 							$value = Flourish\Text::create($value)->camelize();
@@ -395,10 +394,6 @@
 		 */
 		private function dispatch($request, $route, $action)
 		{
-			var_dump($action);
-			var_dump($_GET);
-			exit();
-
 			if ($action instanceof \Closure) {
 
 				//

@@ -357,7 +357,7 @@
 				: $config['write_directory'];
 
 			if (!preg_match(REGEX_ABSOLUTE_PATH, $write_directory)) {
-				$this->writeDirectory = $this->getRoot(NULL, $write_directory);
+				$this->writeDirectory = $this->getRoot() . DS . $write_directory;
 			} else {
 				$this->writeDirectory = $write_directory;
 			}
@@ -412,17 +412,17 @@
 			if ($sub_directory) {
 				$sub_directory   = str_replace('/', DS, $sub_directory);
 				$write_directory = !preg_match(REGEX_ABSOLUTE_PATH, $sub_directory)
-					? self::getWriteDirectory() . DS . $sub_directory
+					? $this->getWriteDirectory() . DS . $sub_directory
 					: $sub_directory;
 			} else {
-				$write_directory = $this->$writeDirectory;
+				$write_directory = $this->writeDirectory;
 			}
 
 			if (!is_dir($write_directory)) {
-				Flourish\Directory::create($write_directory);
+				(new Flourish\Directory($write_directory))->create(0777);
 			}
 
-			return rtrim($write_directory, '/\\' . iw::DS);
+			return rtrim($write_directory, '/\\' . DS);
 		}
 
 

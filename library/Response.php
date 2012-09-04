@@ -14,7 +14,7 @@
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
 
-	class Response implements Interfaces\Response
+	class Response implements Interfaces\Inkwell, Interfaces\Response
 	{
 		const DEFAULT_CACHE_DIRECTORY = 'cache/.responses';
 		const DEFAULT_RESPONSE        = 'not_found';
