@@ -37,7 +37,7 @@
 		],
 
 		//
-		// Temporary redirects (method is preserved)
+		// Temporary redirects
 		//
 
 		307 => [
