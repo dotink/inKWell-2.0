@@ -837,7 +837,7 @@
 			if ($this->protocol == 'HTTP/1.0') {
 				switch ($type) {
 					case 301:
-						header('HTTP/1.0 Moved Permanently');
+						header('HTTP/1.0 301 Moved Permanently');
 						break;
 					case 302:
 					case 303:
@@ -848,7 +848,7 @@
 			} elseif ($this->protocol == 'HTTP/1.1') {
 				switch ($type) {
 					case 301:
-						header('HTTP/1.1 Moved Permanently');
+						header('HTTP/1.1 301 Moved Permanently');
 						break;
 					case 302:
 						header('HTTP/1.1 302 Found');

@@ -154,9 +154,11 @@
 						case NULL:
 							break;
 						case 'uc':
+							$value = str_replace('-', '_', $value);
 							$value = Flourish\Text::create($value)->camelize(TRUE);
 							break;
 						case 'lc':
+							$value = str_replace('-', '_', $value);
 							$value = Flourish\Text::create($value)->camelize();
 							break;
 						case 'us':
@@ -298,6 +300,7 @@
 			if (isset($this->redirects[$pattern])) {
 
 				$existing_translation = $this->redirects[$pattern]['translation'];
+				$existing_type        = $this->redirects[$pattern]['type'];
 
 				if ($type != $existing_type) {
 					throw new Flourish\ProgrammerException(
