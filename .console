@@ -113,15 +113,10 @@
 				}
 			}
 
-			$response = require implode(DIRECTORY_SEPARATOR, array(
-				APPLICATION_ROOT,
-				'includes',
-				'routing.php'
-			));
+			$request  = $app->create('request',  NULL);
+			$response = $app->create('response', NULL, $app->run($request));
 
-			Inkwell\Response::resolve($response)->send();
-
-			exit(0);
+			exit($response->send());
 		}
 	}
 

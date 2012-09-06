@@ -35,25 +35,18 @@
 			// Boostrap!
 			//
 
-			$init    = $include_directory . DIRECTORY_SEPARATOR . 'init.php';
-			$routing = $include_directory . DIRECTORY_SEPARATOR . 'routing.php';
-
-			if (!is_readable($init)) {
+			if (!is_readable($init = $include_directory . DIRECTORY_SEPARATOR . 'init.php')) {
 				throw new \Exception('Unable to include inititialization file.');
 			}
 
-			if (!is_readable($routing)) {
-				throw new \Exception('Unable to include routing file.');
-			}
-
 			$app      = include($init);
-			$response = include($routing);
-			$status   = Response::resolve($response)->send();
+			$request  = $app->create('request',  NULL);
+			$response = $app->create('response', NULL, $app->run($request));
 
-			exit($status);
+			exit($response->send());
 		});
 
-	} catch (Exception $e) {
+	} catch (\Exception $e) {
 
 		//
 		// Panic here, attempt to determine what state we're in, see if some

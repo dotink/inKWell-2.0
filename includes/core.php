@@ -210,44 +210,47 @@
 		 * @param ...
 		 * @return mixed An object instance of the alias type, implementing the provided interfaces
 		 */
-		public function create($alias = NULL, $interfaces = [], $param = NULL)
+		public function create($alias, $interfaces = [], $param = NULL)
 		{
-			if ($alias === NULL) {
-				return new self($this->getRoot());
-			}
-
-			settype($interfaces, 'array');
 			$alias = strtolower($alias);
 
+			settype($interfaces, 'array');
+
+			var_dump($interfaces);
+
 			foreach ($this->factories[$alias] as $class => $factory) {
-				if (class_exists($class)) {
+				if (!class_exists($class)) {
+					continue;
+				}
 
-					$class_interfaces = class_implements($class);
+				$class_interfaces = class_implements($class);
 
-					if (count(array_diff($interfaces, $class_interfaces))) {
+				if (!count(array_diff($interfaces, $class_interfaces))) {
+					if ($factory === NULL) {
+						$result = new $class();
+
+					} elseif (is_callable($factory)) {
+						$result = call_user_func_array($factory, array_slice(func_get_args(), 2));
+
+					} elseif (is_callable($factory = $class . '::' . $factory)) {
+						$result = call_user_func_array($factory, array_slice(func_get_args(), 2));
+
+					} else {
 						continue;
 					}
 
-					$factory = !is_callable($factory)
-						? $class . '::' . $factory
-						: $factory;
-
-					if (is_callable($factory)) {
-						$result = call_user_func_array($factory, array_slice(func_get_args(), 2));
-
-						if (!($result instanceof $class)) {
-							throw new Flourish\ProgrammerException(
-								'Fetched instance is not an instance of class "%s", bad factory',
-								$class
-							);
-						}
-
-						return $result;
+					if (!($result instanceof $class)) {
+						throw new Flourish\ProgrammerException(
+							'Fetched instance is not an instance of class "%s", bad factory',
+							$class
+						);
 					}
+
+					return $result;
 				}
 			}
 
-			throw new Flourish\ValidationException(
+			throw new Flourish\ProgrammerException(
 				'No class implementing the requested interfaces exists for alias "%s"',
 				$alias
 			);
@@ -621,7 +624,16 @@
 		 * @param mixed $offset The child element offset to get
 		 * @return void
 		 */
-		public function offsetGet($offset) {
+		public function offsetGet($offset)
+		{
+			if (!$this->offsetExists($offset)) {
+				throw new Flourish\ProgrammerException(
+					'Element "%s" not set on parent %s',
+					$offset,
+					__CLASS__
+				);
+			}
+
 			return $this->children[$offset];
 		}
 
@@ -632,9 +644,9 @@
 		 * @access public
 		 * @param string $alias The alias to register the factory under
 		 * @param string $class The class to register
-		 * @param string|Closure The factory
+		 * @param NULL|string|Closure The factory
 		 */
-		public function register($alias, $class, $factory)
+		public function register($alias, $class, $factory = NULL)
 		{
 			$alias = strtolower($alias);
 

@@ -4,26 +4,42 @@
 	include 'constants.php';
 	include 'functions.php';
 
-	$app = IW::init(realpath(dirname(__DIR__)));
+
+	//
+	// The IW::init() method takes two arguments, although the second is optional it is shown
+	// here for clarity.  The first argument is the application root by default the parent of
+	// the parent of wherever this file is found.  The second argument is our base library
+	// directory.  Although the structure inside the library directory is built into IW, it is
+	// possible to move or rename the base folder.
+	//
+
+	$app = IW::init(realpath(dirname(__DIR__)), 'library');
+
+
+	//
+	// Register our dependency containers
+	//
 
 	$app->register('config', 'Dotink\Inkwell\Config', function($dir, $name = NULL) {
 		return new Config($dir, $name);
 	});
 
+	$app->register('request', 'Dotink\Inkwell\Request', function() {
+		return new Request();
+	});
+
+	$app->register('response', 'Dotink\Inkwell\Response', function($response){
+		return Response::resolve($response);
+	});
+
+	$app->register('routes', 'Dotink\Inkwell\Routes');
+
+
 	//
-	// Feel free to change how your configuration is done below.  You can point it to a different
-	// base directory or change the name based on the server host, i.e. dev.example.com might
-	// use a config named 'development' while www.example.com will use 'production'
+	// Include configuration logic and return the app
 	//
 
-	$config_name = isset($_SERVER['IW_CONFIG']) ? $_SERVER['IW_CONFIG'] : NULL;
-	$config_dir  = NULL;
-
-	$app->config($config_name, $config_dir);
-
-	//
-	// We should always return the app itself
-	//
+	include 'config.php';
 
 	return $app;
 }

@@ -30,7 +30,6 @@
 		],
 
 		'map' => [
-			'library' => 'IW: library',
 			'vendor'  => 'PSR0: vendor'
 		]
 	]);

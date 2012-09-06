@@ -46,6 +46,24 @@
 
 
 		/**
+		 * The entry controller
+		 *
+		 * @access private
+		 * @var string
+		 */
+		private $entry = NULL;
+
+
+		/**
+		 * The entry Action
+		 *
+		 * @access private
+		 * @var string
+		 */
+		private $entryAction = NULL;
+
+
+		/**
 		 * A list of errors, warnings, and notices encountered when running
 		 *
 		 * @access private
@@ -211,6 +229,26 @@
 		public function __construct()
 		{
 
+		}
+
+
+		/**
+		 * Check whether or not a given class and method are the entry controller and action
+		 *
+		 * If a only a single argument is given it will be checked against the class only
+		 *
+		 * @access protected
+		 * @param string $class The class to check
+		 * @param string $method The method to check
+		 * @return boolean TRUE if the parameters match this instance's entry and action
+		 */
+		protected function checkEntryAction($class, $method = NULL)
+		{
+			if (func_num_args == 1) {
+				return $this->entry == $class;
+			}
+
+			return $this->entry == $class && $this->action == $method;
 		}
 
 
@@ -466,6 +504,11 @@
 						$action_method,
 						$action_class
 					);
+				}
+
+				if (!$this->entry) {
+					$this->entryAction = $action_method;
+					$this->entry       = $action_class;
 				}
 
 				return $this->controller->$action_method();

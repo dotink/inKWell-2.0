@@ -16,9 +16,9 @@
 
 	class Config
 	{
-		const DEFAULT_CONFIG = 'default';
-
+		const DEFAULT_CONFIG          = 'default';
 		const CONFIG_BY_TYPES_ELEMENT = '__TYPES__';
+
 
 		/**
 		 * The cache file for the config
