@@ -55,6 +55,7 @@
 
 	return Config::create('Core', [
 		'/' => 'phpinfo',
+		'/hello/[!:name]' => 'Mattsah\Test\TestController::hello',
 		'/[$:class]/[$:method]/[!:wash]' => '[uc:class]::[lc:method]',
 	]);
 }

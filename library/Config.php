@@ -261,11 +261,13 @@
 		{
 			$type         = strtolower($type);
 			$data         = array();
-			$sub_elements = array_slice(func_get_args(), 2);
+			$sub_elements = $element !== NULL
+				? array_slice(func_get_args(), 2)
+				: array();
 
 			if ($type !== NULL) {
 
-				if ($type[0] = '@') {
+				if ($type[0] == '@') {
 					$element_id        = $this->elementize($type);
 					$data[$element_id] = call_user_func_array([$this, 'get'], func_get_args());
 					$sub_elements      = array_slice(func_get_args(), 1);
@@ -286,8 +288,6 @@
 						$data[$element_id] = self::normalize($config, $typehint);
 					}
 				}
-
-
 
 			} else {
 				$data = $this->data[self::CONFIG_BY_TYPES_ELEMENT];
@@ -375,8 +375,9 @@
 					$this->data[$element_id] = $current['data'];
 
 					if (isset($this->data[$element_id]['class'])) {
-						$this->map($this->data[$element_id]['class'], $element_id);
+						$this->map($this->data[$element_id]['class'], $config_path);
 					}
+
 				} else {
 					$this->data[$element_id] = array();
 				}

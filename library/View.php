@@ -1,7 +1,7 @@
 <?php namespace Dotink\Inkwell
 {
 	/**
-	 * Scaffolder Class
+	 * View Class
 	 *
 	 * @copyright Copyright (c) 2012, Matthew J. Sahagian
 	 * @author Matthew J. Sahagian [mjs] <gent@dotink.org>
@@ -13,7 +13,7 @@
 
 	use Dotink\Flourish;
 
-	class Scaffolder
+	class View
 	{
 
 	}

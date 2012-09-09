@@ -92,11 +92,11 @@
 		/**
 		 * Initialize the class
 		 *
-		 * @param IW $app The application initializing the class
-		 * @param array $config The configuraiton array for the class
-		 * @param string $element The configuration element name
+		 * @param Dotink\Inkwell\IW $app The application instance loading the class
+		 * @param array $config The configuration array for the class
+		 * @return boolean TRUE on success, FALSE on failure
 		 */
-		static public function __init($app, $config, $element)
+		static public function __init($app, $config = array())
 		{
 			return TRUE;
 		}
@@ -221,7 +221,7 @@
 			// Clean values coming in to ensure we don't have invalid UTF-8
 			if (($cast_to === NULL || $cast_to == 'string' || $cast_to == 'array') && $value !== NULL) {
 				$value = self::stripLowOrderBytes($value);
-				$value = fUTF8::clean($value);
+				$value = Flourish\UTF8::clean($value);
 			}
 
 			return $value;
@@ -816,6 +816,7 @@
 		/**
 		 * Gets a value from ::get() and passes it through Flourish\HTML::prepare()
 		 *
+		 * @access public
 		 * @param string $key The key to get - array elements can be accessed via `[sub-key]`
 		 * @param string $cast_to Cast the value to this data type
 		 * @param mixed $default_value The value to be used if the parameter is no set
@@ -828,7 +829,18 @@
 
 
 		/**
+		 * Redirects the request.
 		 *
+		 * The $url parameter can be anything compatible with the modify() method of Flourish\URL.
+		 * This includes but is not limited to, a partial URL as a string, an array of url
+		 * component replacements, or a URL object iself.
+		 *
+		 * It is also important to note that this method always exits.
+		 *
+		 * @access public
+		 * @param Flourish\URL|array|string $url The URL to redirect to
+		 * @param integer $type The type of redirect, defaults to 303
+		 * @return void
 		 */
 		public function redirect($url = NULL, $type = 303)
 		{

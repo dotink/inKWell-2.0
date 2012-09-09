@@ -13,6 +13,5 @@
 
 	interface Controller extends \ArrayAccess
 	{
-		public function getError();
 	}
 }

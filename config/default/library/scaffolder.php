@@ -1,6 +1,12 @@
 <?php namespace Dotink\Inkwell {
 
-	return Config::create('Library', [
+	return Config::create(['Extension'], [
+
+		//
+		// The class which we configure
+		//
+
+		'class' => __NAMESPACE__ . '\Scaffolder',
 
 		//
 		// Preload our scaffolder

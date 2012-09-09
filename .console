@@ -113,10 +113,9 @@
 				}
 			}
 
-			$request  = $app->create('request',  NULL);
-			$response = $app->create('response', NULL, $app->run($request));
+			$status = require implode(DIRECTORY_SEPARATOR, ['.', 'includes', 'run.php']);
 
-			exit($response->send());
+			exit($status);
 		}
 	}
 

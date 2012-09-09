@@ -19,6 +19,7 @@
 		const DEFAULT_CACHE_DIRECTORY = 'cache/.responses';
 		const DEFAULT_RESPONSE        = 'not_found';
 
+
 		/**
 		 * Location of the cache directory
 		 *
@@ -28,14 +29,6 @@
 		 */
 		static private $cacheDirectory = NULL;
 
-		/**
-		 * Registered response for multi-response resolution
-		 *
-		 * @static
-		 * @access private
-		 * @var string
-		 */
-		static private $response  = NULL;
 
 		/**
 		 * A list of available responses
@@ -44,7 +37,7 @@
 		 * @access private
 		 * @var array
 		 */
-		static private $responses = [
+		static private $states = [
 			'ok' => [
 				'code' => 200,
 				'body' => NULL
@@ -68,8 +61,13 @@
 			'internal_server_error' => [
 				'code' => 500,
 				'body' => 'The requested resource is not available due to an internal error'
+			],
+			'service_unavailable' => [
+				'code' => 503,
+				'body' => 'The requested resource is temporarily unavailable'
 			]
 		];
+
 
 		/**
 		 * A list of available renderers
@@ -80,6 +78,7 @@
 		 */
 		static private $renderers = array();
 
+
 		/**
 		 * A list of available render methods
 		 *
@@ -89,6 +88,7 @@
 		 */
 		static private $renderMethods = array();
 
+
 		/**
 		 * The view for the response
 		 *
@@ -96,6 +96,7 @@
 		 * @var mixed
 		 */
 		protected $view = NULL;
+
 
 		/**
 		 * The status of the response, ex: 'ok'
@@ -105,6 +106,7 @@
 		 */
 		private $status = NULL;
 
+
 		/**
 		 * The code of the response, ex: 200
 		 *
@@ -112,6 +114,7 @@
 		 * @var integer
 		 */
 		private $code = NULL;
+
 
 		/**
 		 * The content/mime type of the response, ex: 'text/html'
@@ -121,6 +124,7 @@
 		 */
 		private $type = NULL;
 
+
 		/**
 		 * A list of headers to output if the response is sent
 		 *
@@ -129,6 +133,7 @@
 		 */
 		private $headers = array();
 
+
 		/**
 		 * The render hooks which will be applied to the view on sending
 		 *
@@ -136,6 +141,7 @@
 		 * @var array
 		 */
 		private $renderHooks = array();
+
 
 		/**
 		 * Initialize the class
@@ -157,37 +163,6 @@
 			return TRUE;
 		}
 
-		/**
-		 * Clear the registered response and return it.
-		 *
-		 * @static
-		 * @access public
-		 * @param void
-		 * @return Response The previously registered response
-		 */
-		static public function clear()
-		{
-			$registered_response  = self::$response;
-			self::$response       = NULL;
-
-			return $registered_response;
-		}
-
-		/**
-		 * Register a response to be resolved later.
-		 *
-		 * This will register a response (object or otherwise) which can be resolved by passing
-		 * NULL to the Response::resolve() method.
-		 *
-		 * @static
-		 * @access public
-		 * @param void
-		 * @return Response The previously registered response
-		 */
-		static public function register($response)
-		{
-			self::$response = $response;
-		}
 
 		/**
 		 * Registers a render method for a particular class
@@ -209,41 +184,6 @@
 			self::$renderMethods[strtolower($class)] = $method;
 		}
 
-		/**
-		 * Resolves a response one way or another.
-		 *
-		 * This will basically turn whatever you pass it into a response object.  The assumption
-		 * is, if you actually pass it data, that you are looking to return "ok".  It will use the
-		 * cache system to make attempts to determine the mime type and cache it for future use.
-		 *
-		 * @static
-		 * @access public
-		 * @param mixed $content The content to resolve to a response
-		 * @return Response
-		 */
-		static public function resolve($content = NULL)
-		{
-			if (isset(self::$response)) {
-				$content = self::resolve(self::clear());
-			}
-
-			if (!($content instanceof self)) {
-
-				//
-				// Previous versions of inKWell may have responded with objects such as View or
-				// fImage.  The short answer here is that if we receive content to resolve, we
-				// are going to assume that they want an OK, as controller::triggerError() was
-				// still promoted.  If that is the case, we can create a response object
-				// directly and use the content as we see fit.  The send() method will take care
-				// of how to output it.
-				//
-
-				$content = new self('ok', NULL, array(), $content);
-
-			}
-
-			return $content;
-		}
 
 		/**
 		 * Rendering callback for object typed views.
@@ -270,6 +210,7 @@
 			}
 		}
 
+
 		/**
 		 * This will send a cache file for the current unique URL based on a mime type.
 		 *
@@ -290,21 +231,22 @@
 			return;
 		}
 
+
 		/**
-		 * Resolves a response short name into the appropriate code
+		 * Resolves a response state name into the appropriate code
 		 *
 		 * @static
 		 * @access protected
-		 * @param string $response The response name, ex: 'ok' or 'not_found'
+		 * @param string $state The , ex: 'ok' or 'not_found'
 		 * @return int The response code
 		 * @throws Flourish\ProgrammerException if the response code is undefined or non-numeric
 		 */
-		static protected function translateCode($response_name)
+		static protected function translateCode($state)
 		{
-			$response_name = strtolower($response_name);
+			$state = strtolower($state);
 
-			if (isset(self::$responses[$response_name]['code'])) {
-				$response_code = self::$responses[$response_name]['code'];
+			if (isset(self::$states[$state]['code'])) {
+				$response_code = self::$states[$state]['code'];
 
 				if (is_numeric($response_code)) {
 					return $response_code;
@@ -312,10 +254,11 @@
 			}
 
 			throw new Flourish\ProgrammerException(
-				'Cannot create response with undefined or invalid code "%s"',
-				$response_name
+				'Cannot create response with undefined or invalid state "%s"',
+				$state
 			);
 		}
+
 
 		/**
 		 * Caches a file for the current unique URL using the data type as part of its id.
@@ -343,49 +286,102 @@
 		}
 
 		/**
-		 * Create a new response object
+		 * Constructs a new response
+		 *
+		 * The response state will be set to not found.  To modify the response, use the
+		 * __invoke() functionality.
 		 *
 		 * @access public
-		 * @param string $status The status string, ex: 'ok', 'not_found', ...
-		 * @param string $type The mimetype to send as
-		 * @param array $headers Additional headers to output
-		 * @param mixed $view The view to send, i.e. the content
 		 * @return void
 		 */
-		public function __construct($status, $type = NULL, $headers = array(), $view = NULL)
+		public function __construct()
 		{
-			$this->status   = $status;
-			$this->code     = self::translateCode($status);
-			$this->type     = ($type)
-				? strtolower($type)
-				: NULL;
+			$this('not_found');
+		}
+
+		/**
+		 * Creates or recreates the object with information other than the defaults
+		 *
+		 * This method has multiple signatures depending on the parameter count:
+		 *
+		 * $response($status)
+		 * $response($status, $view)
+		 * $response($status, $type, $view)
+		 * $response($status, $type, $headers, $view)
+		 *
+		 * @access public
+		 * @param string $status
+		 * @param string $type
+		 * @param array $headers
+		 * @param string $view
+		 */
+		public function __invoke($status, $type = NULL, $headers = array(), $view = NULL)
+		{
+			$this->status = strtolower($status);
+			$this->code   = self::translateCode($this->status);
+
+			switch (func_num_args()) {
+				case 2:
+					$this->type    = NULL;
+					$this->headers = array();
+					$this->view    = func_get_arg(1);
+					break;
+
+				case 3:
+					$this->type    = strtolower($type);
+					$this->headers = array();
+					$this->view    = func_get_arg(2);
+					break;
+
+				default:
+					$this->type    = strtolower($type);
+					$this->headers = $headers;
+					$this->view    = $view;
+			}
+
+			$this->renderHooks = array();
 
 			foreach (self::$renderers as $type_match => $callback) {
 				if (preg_match('#' . $type_match . '#', $this->type)) {
-					$this->renderHooks[] = $callback;
+						$this->renderHooks[] = $callback;
 				}
 			}
 
-			//
-			// Add our render object callback at the end in case our view turns out to be
-			// an object not handled by previous renderers.
-			//
-
-			$this->renderHooks[] = ['Response', 'renderObject'];
-
-			//
-			// Set our headers and view.  This will vary depending on how many parameters they
-			// provided.
-			//
-
-			if (func_num_args() > 3) {
-				$this->headers = func_get_arg(2);
-				$this->view    = func_get_arg(3);
-			} else {
-				$this->headers = array();
-				$this->view    = func_get_arg(2);
-			}
+			return $this;
 		}
+
+
+		/**
+		 * Resolves a response one way or another.
+		 *
+		 * This will basically turn whatever you pass it into a response object.  The assumption
+		 * is, if you actually pass it data, that you are looking to return "ok".  It will use the
+		 * cache system to make attempts to determine the mime type and cache it for future use.
+		 *
+		 * @access public
+		 * @param mixed $response The response to resolve
+		 * @return Response
+		 */
+		static public function resolve($content = NULL)
+		{
+			if (!($content instanceof self)) {
+				$response = new self();
+
+				if ($content === NULL) {
+					$response('not_found');
+				} elseif (empty($content)) {
+					$response('no_content');
+				} else {
+					$response('ok', NULL, array(), $content);
+				}
+
+			} else {
+				$response = $content;
+			}
+
+			return $response;
+		}
+
 
 		/**
 		 * Set an individual header on the response
@@ -401,14 +397,15 @@
 			return $this;
 		}
 
+
 		/**
 		 * Sends the response to the screen
 		 *
 		 * @access public
-		 * @param void
-		 * @return void
+		 * @param boolean $headers_only Whether or not we're only sending headers
+		 * @return integer The status of the request
 		 */
-		public function send()
+		public function send($headers_only = FALSE)
 		{
 			$version  = end(explode($_SERVER['SERVER_PROTOCOL'], '/'));
 			$aliases  = array(
@@ -423,9 +420,9 @@
 			//
 
 			if ($this->view === NULL) {
-				if (isset(self::$responses[$this->status]['body'])) {
-					$this->view = self::$responses[$this->status]['body'];
-					$this->view = (new Flourish\Text($this->view))->compose();
+				if (isset(self::$states[$this->status]['body'])) {
+					$this->view = self::$states[$this->status]['body'];
+					$this->view = Flourish\Text::create($this->view)->compose();
 				} else {
 					$this->status = 'no_content';
 					$this->view   = NULL;
@@ -475,20 +472,44 @@
 				: sprintf('Status: %d %s', $this->code, $this->status)
 			);
 
+	
+			$headers    = array();
+			$text_types = [
+				'text/html', 'application/json', 'application/xhtml+xml', 'application/xml',
+				'text/plain',
+			];
+
 			if ($this->code != 204) {
-				header(sprintf('Content-Type: %s', $this->type));
+				if (in_array($this->type, $text_types)) {
+					$headers[] = sprintf('Content-Type: %s; charset=utf-8', $this->type);
+				} else {
+					$headers[] = sprintf('Content-Type: %s', $this->type);
+				}
 			}
 
 			foreach ($this->headers as $header => $value) {
-				header($header . ': ' . $value);
+				$headers[] = $header . ': ' . $value;
 			}
 
-			//
-			// Last, but not least, echo our view.
-			//
 
-			echo $this->view;
-			exit(1);
+			if ($headers_only) {
+				foreach ($headers as $header) {
+					if (Flourish\Core::checkSAPI('cli')) {
+						print($header . "\n");
+					} else {
+						header($header);
+					}
+				}
+
+			} else {
+				foreach ($headers as $header) {
+					header($header);
+				}
+
+				print($this->view);
+			}
+  
+			return $this->code;
 		}
 	}
 }

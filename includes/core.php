@@ -14,6 +14,7 @@
 	 */
 
 	use Dotink\Flourish;
+	use Dotink\Interfaces;
 
 	class IW implements \ArrayAccess
 	{
@@ -216,8 +217,6 @@
 
 			settype($interfaces, 'array');
 
-			var_dump($interfaces);
-
 			foreach ($this->factories[$alias] as $class => $factory) {
 				if (!class_exists($class)) {
 					continue;
@@ -266,7 +265,7 @@
 		 * @return IW The application for chaining
 		 */
 		public function config($config_name = NULL, $config_root = NULL)
-		{
+		{	 
 			$this->setRoot('config', !isset($config_root)
 				? $this->getRoot() . DS . self::DEFAULT_CONFIG_DIRECTORY
 				: $config_root
@@ -275,10 +274,37 @@
 			$config = $this->create('config', [], $this->getRoot('config'), $config_name);
 
 			//
+			// Set up our extensions.
+			//
+
+			$extension_configs = $config->getAllByType('array', 'Extension');
+
+			foreach ($extension_configs as $element_id => $extension_config) {
+				if ($class = $config->classize($element_id)) {
+
+					$root = $extension_config['root_directory'];
+					$key  = !isset($extension_config['key'])
+						? Flourish\Text::create(end(explode('\\', $class)))->underscorize()
+						: $extension_config['key'];
+
+					if (isset($this->extensions[$key])) {
+						throw new Flourish\ProgrammerException(
+							'An extension with key "%s" already exists',
+							$key
+						);
+					}
+
+					if ($root) {
+						$this->setRoot($key, $root);
+					}
+				}
+			}
+
+			//
 			// Set up our autoloaders
 			//
 
-			foreach($config->getAllByType('array', '@autoloading') as $autoloading_config) {
+			foreach ($config->getAllByType('array', '@autoloading') as $autoloading_config) {
 				settype($autoloading_config['standards'], 'array');
 				settype($autoloading_config['map'], 'array');
 
@@ -373,15 +399,15 @@
 		 * Gets a configured root directory from the configured root directories
 		 *
 		 * @access public
-		 * @param string $element The class or configuration element
+		 * @param string $key The key to lookup
 		 * @param string $default A default root, relative to the application root
 		 * @return string A reference to the root directory for "live roots"
 		 */
-		public function getRoot($element = NULL, $default = NULL)
+		public function getRoot($key = NULL, $default = NULL)
 		{
-			$element = !$element ? NULL : strtolower($element);
+			$key = !$key ? NULL : strtolower($key);
 
-			if (!isset($this->roots[$element])) {
+			if (!isset($this->roots[$key])) {
 				if (!$default) {
 					$directory = $this->roots[NULL];
 				} else {
@@ -391,7 +417,7 @@
 						: $default;
 				}
 			} else {
-				$directory = $this->roots[$element];
+				$directory = $this->roots[$key];
 			}
 
 			return $directory;
@@ -481,10 +507,9 @@
 			//
 
 			$class_config = $this['config']->get('array', $class);
-			$element_id   = $this['config']->elementize($class);
 
 			try {
-				if (call_user_func($init_callback, $this, $class_config, $element_id)) {
+				if (call_user_func($init_callback, $this, $class_config)) {
 					$this->initializedClasses[] = $class;
 					return TRUE;
 				}
@@ -554,7 +579,9 @@
 							//
 
 							if (isset($this['config'])) {
-								$this['config']->map($class, $base_dir . DS . $class_path);
+								if (!$this['config']->elementize($class)) {
+									$this['config']->map($class, $base_dir . DS . $class_path);
+								}
 
 								if (is_array($interfaces = class_implements($class, FALSE))) {
 									return (in_array('Dotink\Interfaces\Inkwell', $interfaces))
@@ -665,11 +692,14 @@
 		 * @param Request $request
 		 * @return integer The return value
 		 */
-		public function run($request)
+		public function run(Interfaces\Request $request)
 		{
+			$routes   = $this->create('routes',   self::ROUTES_INTERFACE);
+			$response = $this->create('response', self::RESPONSE_INTERFACE);
+
+			$response_configs = $this['config']->getAllByType('array', '@response');
 			$redirect_configs = $this['config']->getAllByType('array', '@redirects');
 			$route_configs    = $this['config']->getAllByType('array', '@routes');
-			$routes           = $this->create('routes', [self::ROUTES_INTERFACE]);
 
 			foreach ($redirect_configs as $config) {
 				foreach ($config as $type => $redirects) {
@@ -680,12 +710,16 @@
 			}
 
 			foreach ($route_configs as $config) {
+				$base_url = isset($config['base_url'])
+					? $config['base_url']
+					: NULL;
+
 				foreach ($config as $route => $action) {
-					$routes->link($route, $action);
+					$routes->link($base_url . $route, $action);
 				}
 			}
 
-			$response = $routes->run($request);
+			$response = $routes->run($request, $response);
 
 			return $response;
 		}
@@ -701,9 +735,10 @@
 		 */
 		protected function setRoot($key, $root_directory)
 		{
+			$key               = strtolower($key);
 			$root_directory    = str_replace('/', DS, rtrim($root_directory, '/\\' . DS));
 			$this->roots[$key] = !preg_match(REGEX_ABSOLUTE_PATH, $root_directory)
-				? realpath($this->roots[NULL] . DS . $root_directory)
+				? realpath($this->getRoot() . DS . $root_directory)
 				: realpath($root_directory);
 
 			if (!is_dir($this->roots[$key])) {

@@ -199,28 +199,6 @@
 
 
 		/**
-		 * Triggers a general ContinueException and logs the message passed
-		 *
-		 * @static
-		 * @access private
-		 * @param string $message An sprintf style message
-		 * @param mixed $component A component of the message
-		 * @param ...
-		 * @return void
-		 */
-		static private function triggerContinue($message, $component)
-		{
-			$components  = func_get_args();
-			$message     = array_shift($components);
-			$this->log[] = vsprintf('Continue: ' . $message, $components);
-
-			throw new Flourish\ContinueException(
-				'Error running route, continuing...'
-			);
-		}
-
-
-		/**
 		 * Construct a routes collection
 		 *
 		 * @access public
@@ -260,9 +238,9 @@
 		 * @param array $components A list of components mapping param name => value
 		 * @return string The URL with route tokens replaced by respective components
 		 */
-		public function compose($route, $components)
+		public function compose($route, $components, &$remainder)
 		{
-			$url = self::decompile($route, $components);
+			$url = self::decompile($route, $components, $remainder);
 
 			while ($this->translate($url) !== FALSE);
 			return $url;
@@ -372,50 +350,71 @@
 		 * attempt to dispatch to the linked action.
 		 *
 		 * @access public
-		 * @param Request $request The request to run against
+		 * @param Interfaces\Request $request The request to run against
+		 * @param Interfaces\Response $response The response to use
 		 * @return mixed The response of the dispatched action
 		 */
-		public function run(Interfaces\Request $request)
+		public function run(Interfaces\Request $request, Interfaces\Response $response)
 		{
-			$this->errors  = array();
-			$request_uri   = $request->getPath();
-			$redirect_type = $this->translate($request_uri);
+			$this->errors = array();
+			$request_uri  = $request->getPath();
+			$request_uri  = $this->translateRedirect($request_uri, $redirect_type);
 
-			if ($redirect_type !== FALSE) {
+			if ($redirect_type) {
 				$request->redirect($request_uri, $redirect_type);
 			}
 
 			foreach ($this->links as $pattern => $link) {
+
+				$this->controller = NULL;
+
 				try {
-
-					$this->controller = NULL;
-					$old_get          = $_GET;
-
 					if (preg_match('#^' . $pattern . '$#', $request_uri, $matches)) {
 						array_shift($matches);
 
 						$route  = $link['route'];
 						$params = array_combine($link['params'], $matches);
-						$action = is_string($link['action'])
-							? self::decompile($link['action'], $params, $params)
-							: $link['action'];
+						$action = $this->parseAction(
+							is_string($link['action'])
+								? self::decompile($link['action'], $params, $unused_params)
+								: $link['action']
+						);
 
-						$_GET     = array_merge($_GET, $params);
-						$response = $this->dispatch($request, $route, $action);
+						foreach ($unused_params as $key => $value) {
+							$request->set($key, $value);
+						}
+
+						ob_start();
+
+						if ($action instanceof \Closure) {
+							$controller_response = $action([
+								'request'  => $request,
+								'response' => $response,
+								'routes'   => $this
+							]);
+
+						} elseif (is_array($action)) {
+							$this->controller = new $action[0]([
+								'request'  => $request,
+								'response' => $response,
+								'routes'   => $this
+							]);
+
+							$controller_response = $this->controller->$action[1]();
+
+						} else {
+							$controller_response = $action();
+						}
+
+						$response = ($output = ob_get_clean())
+							? $response('ok', NULL, [], $output)
+							: $response->resolve($controller_response);
 					}
 
 				} catch (Flourish\ContinueException $e) {
-					$_GET = $old_get;
 					continue;
 
 				} catch (Flourish\YieldException $e) {
-					$_GET = $old_get;
-
-					if (isset($this->controller)) {
-						$response = $this->controller->getError();
-					} else {
-						$response = $e->getMessage();
-					}
 					break;
 				}
 			}
@@ -425,23 +424,16 @@
 
 
 		/**
-		 * Dispatches to a given action
+		 * Parses an action, triggering errors in the event the action is invalid
 		 *
 		 * @access private
-		 * @param Request $request The request
-		 * @param string The original route
-		 * @param callable $action The action we're dispatching to
-		 * @return mixed The response of the action
+		 * @param $action The action to parse
+		 * @return mixed A suitable action to run
 		 */
-		private function dispatch($request, $route, $action)
+		private function parseAction($action)
 		{
 			if ($action instanceof \Closure) {
-
-				//
-				// Call Closures directly
-				//
-
-				return $action(['request' => $request, 'routes'  => $this]);
+				return $action;
 
 			} elseif (is_string($action)) {
 
@@ -449,82 +441,69 @@
 				// Strings are either direct function calls or parseable object callbacks
 				//
 
-				if (strpos('::', $action) === FALSE) {
+				if (strpos($action, '::') === FALSE) {
 					if (!is_callable($action)) {
-						self::triggerContinue(
+						$this->triggerContinue(
 							'Action "%s" is not callable: Skipping',
 							$action
 						);
 					}
 
-					ob_start();
-					$response = call_user_func($action);
-					$output   = ob_get_clean();
-
-					return $output ? $output : $response;
+					return $action;
 				}
 
-				list($action_class, $action_method) = self::parseAction($action);
+				list($class, $method) = explode('::', $action);
 
-				if (!class_exists($action_class)) {
-					self::triggerContinue(
+				if (!class_exists($class)) {
+					$this->triggerContinue(
 						'Action class "%s" does not exist: Skipping',
-						$action_class
+						$class
 					);
 				}
 
-				if (!in_array(self::CONTROLLER_INTERFACE, class_implements($action_class))) {
-					self::triggerContinue(
+				if (!in_array(self::CONTROLLER_INTERFACE, class_implements($class))) {
+					$this->triggerContinue(
 						'Action class "%s" does not implement %s',
-						$action_class,
+						$class,
 						self::CONTROLLER_INTERFACE
 					);
 				}
 
-				if (strpos('__', $action_method) === 0) {
-					self::triggerContinue(
+				if (strpos('__', $method) === 0) {
+					$this->triggerContinue(
 						'Action method "%s" cannot be a magic method',
-						$action_method
+						$method
 					);
 				}
 
-				if (!method_exists($action_class, $action_method)) {
-					self::triggerContinue(
+				if (!method_exists($class, $method)) {
+					$this->triggerContinue(
 						'Action method "%s" does not exist for class %s',
-						$action_method,
-						$action_class
+						$method,
+						$class
 					);
 				}
 
-				$this->controller = new $action_class(['request' => $request, 'routes'  => $this]);
-
-				if (!is_callable([$controller, $action_method])) {
-					self::triggerContinue(
+				if (!is_callable([$class, $method])) {
+					$this->triggerContinue(
 						'Action method "%s" is not callable on object of class %s',
-						$action_method,
-						$action_class
+						$method,
+						$class
 					);
 				}
 
 				if (!$this->entry) {
-					$this->entryAction = $action_method;
-					$this->entry       = $action_class;
+					$this->entryAction = $method;
+					$this->entry       = $class;
 				}
 
-				return $this->controller->$action_method();
-
-			} else {
-
-				//
-				// Invalid action type
-				//
-
-				self::triggerContinue(
-					'Invalid action "%s" for route %s',
-					$action,
-					$route
-				);
+				return [$class, $method];
 			}
+
+			$this->triggerContinue(
+				'Invalid action "%s"',
+				$action
+			);
 		}
 
 		/**
@@ -534,20 +513,43 @@
 		 * @param sring $url The URL to translate
 		 * @return integer|boolean The type of redirect that should occur, FALSE if none
 		 */
-		private function translate(&$url)
+		private function translateRedirect($request_uri, &$redirect_type = NULL)
 		{
 			foreach ($this->redirects as $pattern => $redirect) {
-				if (preg_match('#^' . $pattern . '$#', $url, $matches)) {
+				if (preg_match('#^' . $pattern . '$#', $request_uri, $matches)) {
 					array_shift($matches);
 
-					$params = array_combine($redirect['params'], $matches);
-					$url    = self::decompile($redirect['translation'], $params);
+					$params        = array_combine($redirect['params'], $matches);
+					$request_uri   = self::decompile($redirect['translation'], $params);
+					$redirect_type = $redirect['type'];
 
-					return $redirect['type'];
+					break;
 				}
 			}
 
-			return FALSE;
+			return $request_uri;
+		}
+
+
+		/**
+		 * Triggers a general ContinueException and logs the message passed
+		 *
+		 * @static
+		 * @access private
+		 * @param string $message An sprintf style message
+		 * @param mixed $component A component of the message
+		 * @param ...
+		 * @return void
+		 */
+		private function triggerContinue($message, $component)
+		{
+			$components  = func_get_args();
+			$message     = array_shift($components);
+			$this->log[] = vsprintf('Continue: ' . $message, $components);
+
+			throw new Flourish\ContinueException(
+				'Error running route, continuing...'
+			);
 		}
 	}
 }

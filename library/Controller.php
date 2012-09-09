@@ -19,14 +19,6 @@
 	{
 		use Traits\Container;
 
-		/**
-		 *
-		 */
-		public function getError()
-		{
-			return $this->error;
-		}
-
 
 		/**
 		 * Check whether or not a given class is the entry controller
@@ -65,18 +57,36 @@
 		/**
 		 *
 		 */
-		protected function exec(Dotink\Interfaces\Request $request)
+		protected function exec($method, $type, $url, $params)
 		{
-			return $this['routes']->run($request);
+			$url = $this['routes']->compose($url, $params, $params);
+
+			if ($url[0] = '/') {
+				$request_class  = get_class($this['request']);
+				$request        = new $request_class($method, $type, $url, $params);
+				$response       = clone $this['response'];
+
+				return $this['routes']->run($request, $response);
+			}
+
+
+			$request_class = get_class($this['request']);
+			$request       = new Request();
+
+
+			if ($url[0] = '/') {
+
+			}
 		}
 
 
 		/**
 		 *
 		 */
-		protected function triggerError($error = 'not_found')
+		protected function triggerError($error, $message = NULL)
 		{
-			$this->error = 'FU!';
+			$this['response']($error, $message);
+
 			throw new Flourish\YieldException(
 				'Controller has yielded due to error: %s',
 				$error

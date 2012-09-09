@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	try {
 
 		call_user_func(function() {
@@ -39,11 +39,14 @@
 				throw new \Exception('Unable to include inititialization file.');
 			}
 
-			$app      = include($init);
-			$request  = $app->create('request',  NULL);
-			$response = $app->create('response', NULL, $app->run($request));
+			if (!is_readable($run  = $include_directory . DIRECTORY_SEPARATOR . 'run.php')) {
+				throw new \Exception('Unable to include run file.');
+			}
 
-			exit($response->send());
+			$app    = include($init);
+			$status = include($run);
+
+			exit($status);
 		});
 
 	} catch (\Exception $e) {

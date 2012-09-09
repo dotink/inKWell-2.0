@@ -1,12 +1,6 @@
 <?php namespace Dotink\Inkwell {
 
-	return Config::create(['Library', '@autoloading'], [
-
-		//
-		// The default response
-		//
-
-		'default' => 'not_found',
+	return Config::create(['Core'], [
 
 		//
 		// Renderers are custom callback logic which will have the response passed to them
@@ -21,12 +15,12 @@
 		'renderers' => [],
 
 		//
-		// Responses are short name aliases for various response codes.  They should not include
-		// redirects, as redirects are never as an actual bodied response and are handled by
-		// Controller::redirect().
+		// Response state are short name aliases for various response codes and/or default content.
+		// They should not include redirects, as redirects are never as an actual bodied response
+		// and are handled by the Request class.
 		//
 
-		'responses' => [
+		'states' => [
 
 			//
 			// For additional information about when each one of these response codes should be
@@ -71,8 +65,8 @@
 			],
 
 			'not_found' => [
-				'code' => 404,
-				'body' => 'The requested resource could not be found'
+				'code'    => 404,
+				'body'    => 'The requested resource could not be found'
 			],
 
 			'not_allowed' => [
@@ -96,12 +90,5 @@
 			]
 		],
 
-		//
-		// Load supported response types from user/responses
-		//
-
-		'@autoloading' => [
-			'map' => ['*\Response*' => 'user/responses']
-		]
 	]);
 }
