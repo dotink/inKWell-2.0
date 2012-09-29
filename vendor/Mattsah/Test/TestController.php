@@ -1,4 +1,4 @@
-<?php namespace Mattsah\Test 
+<?php namespace Mattsah\Test
 {
 	use Dotink\Inkwell;
 	use Dotink\Flourish;

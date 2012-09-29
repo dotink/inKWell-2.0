@@ -6,8 +6,10 @@
 	// use a config named 'development' while www.example.com will use 'production'
 	//
 
-	$config_name = isset($_SERVER['IW_CONFIG']) ? $_SERVER['IW_CONFIG'] : NULL;
 	$config_dir  = NULL;
+	$config_name = isset($_SERVER['IW_CONFIG'])
+		? $_SERVER['IW_CONFIG']
+		: NULL;
 
 	$app->config($config_name, $config_dir);
 }
