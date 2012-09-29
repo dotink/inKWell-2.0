@@ -98,7 +98,7 @@
 		 * @param Callable $config_callback The configuration callback
 		 * @return IW A new instance of an inKWell application
 		 */
-		static public function init($root_directory, $library_directory = 'library')
+		static public function create($root_directory, $library_directory = 'library')
 		{
 			return new self($root_directory, $library_directory);
 		}
