@@ -445,7 +445,7 @@
 			}
 
 			$this->view   = (string) $this->view;
-			$this->status = ucwords((new Flourish\Text($this->status))->humanize());
+			$this->status = ucwords(Flourish\Text::create($this->status)->humanize());
 			$this->code   = isset($aliases[$version][$this->code])
 				? $aliases[$version][$this->code]
 				: $this->code;
