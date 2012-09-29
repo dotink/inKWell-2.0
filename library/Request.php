@@ -72,7 +72,16 @@
 
 
 		/**
-		 * The  protocol for the request
+		 * The method for the request
+		 *
+		 * @access private
+		 * @var string
+		 */
+		private $method = NULL;
+
+
+		/**
+		 * The protocol for the request
 		 *
 		 * @access private
 		 * @var string
@@ -400,34 +409,19 @@
 		 */
 		public function __construct($method = NULL, $accept = NULL, $url = NULL, $data = NULL)
 		{
-			$valid_methods  = [GET, POST, PUT, DELETE, HEAD];
-			$this->method   = strtolower(!$method ? $_SERVER['REQUEST_METHOD'] : $method);
-			$this->accept   = $accept;
 			$this->url      = new Flourish\URL($url);
-			$this->data     = array();
 			$this->files    = $_FILES;
+
 			$this->protocol = isset($_SERVER['SERVER_PROTOCOL'])
 				? $_SERVER['SERVER_PROTOCOL']
 				: 'HTTP/1.1';
 
-			if (!in_array($this->method, $valid_methods)) {
-				throw new Flourish\ValidationException(
-					'Invalid method "%s" specified, must be one of %s',
-					$this->method,
-					join(', ', $valid_methods)
-				);
-			}
-
-			if (!$this->accept && isset($_SERVER['HTTP_ACCEPT'])) {
-				$this->accept = $_SERVER['HTTP_ACCEPT'];
-			}
-
-			if (isset($_SERVER['HTTP_ACCEPT_LANGUAGES'])) {
-				$this->acceptLanguages = $_SERVER['HTTP_ACCEPT_LANGUAGES'];
-			}
+			$this->method = !$method
+				? strtolower($_SERVER['REQUEST_METHOD'])
+				: strtolower($method);
 
 			if ($data == NULL) {
-				if ($this->checkMethod(GET)) {
+				if ($this->checkMethod(HTTP\GET)) {
 					$this->data == $_GET;
 				} else{
 					$this->data = array_replace_recursive($_GET, $_POST);
@@ -446,9 +440,21 @@
 					$this->data = $data;
 				} else {
 					throw new Flourish\ProgrammerException(
-						'Invalid data passed, must be valid query string or array'
+						'Invalid data passed, must be query string or array'
 					);
 				}
+			}
+
+			$this->accept = !$accept && isset($_SERVER['HTTP_ACCEPT'])
+				? $_SERVER['HTTP_ACCEPT']
+				: $accept;
+
+			if (isset($_SERVER['HTTP_ACCEPT_LANGUAGES'])) {
+				$this->acceptLanguages = $_SERVER['HTTP_ACCEPT_LANGUAGES'];
+			}
+
+			if (isset($this->data['@method'])) {
+				$this->method = strtolower($this->data['@method']);
 			}
 		}
 
@@ -778,6 +784,12 @@
 		}
 
 
+		public function getMethod()
+		{
+			return $this->method;
+		}
+
+
 		/**
 		 * Gets a value from the request data, restricting to a specific set of values
 		 *
@@ -810,21 +822,6 @@
 		public function getPath()
 		{
 			return $this->url->getPath();
-		}
-
-
-		/**
-		 * Gets a value from ::get() and passes it through Flourish\HTML::prepare()
-		 *
-		 * @access public
-		 * @param string $key The key to get - array elements can be accessed via `[sub-key]`
-		 * @param string $cast_to Cast the value to this data type
-		 * @param mixed $default_value The value to be used if the parameter is no set
-		 * @return string  The prepared value
-		 */
-		public function prepare($key, $cast_to=NULL, $default_value=NULL)
-		{
-			return Flourish\HTML::prepare($this->get($key, $cast_to, $default_value));
 		}
 
 
