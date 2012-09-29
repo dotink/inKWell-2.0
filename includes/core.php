@@ -266,38 +266,61 @@
 		 * @return IW The application for chaining
 		 */
 		public function config($config_name = NULL, $config_root = NULL)
-		{	 
-			$this->setRoot('config', !isset($config_root)
-				? $this->getRoot() . DS . self::DEFAULT_CONFIG_DIRECTORY
-				: $config_root
-			);
+		{
+			$config_root = $config_root ?: $this->getRoot() . DS . self::DEFAULT_CONFIG_DIRECTORY;
+			$config      = $this->create('config');
 
-			$config = $this->create('config', [], $this->getRoot('config'), $config_name);
+			$config->load($config_root, $config_name);
+			$this->setRoot('config', $config_root);
 
 			//
-			// Set up our extensions.
+			// Set up our libraries.
 			//
 
-			$extension_configs = $config->getAllByType('array', 'Extension');
+			$library_configs = $config->getAllByType('array', 'Library');
 
-			foreach ($extension_configs as $element_id => $extension_config) {
+			foreach ($library_configs as $element_id => $library_config) {
 				if ($class = $config->classize($element_id)) {
 
-					$root = $extension_config['root_directory'];
-					$key  = !isset($extension_config['key'])
-						? Flourish\Text::create(end(explode('\\', $class)))->underscorize()
-						: $extension_config['key'];
-
-					if (isset($this->extensions[$key])) {
+					if (!isset($library_config['root_directory'])) {
 						throw new Flourish\ProgrammerException(
-							'An extension with key "%s" already exists',
+							'Library config must contain a "root_directory" definition'
+						);
+					}
+
+					if (!isset($library_config['class'])) {
+						throw new Flourish\ProgrammerException(
+							'Library config must contain a "class" definition'
+						);
+					}
+
+					$class = $library_config['class'];
+					$root  = $library_config['root_directory'];
+
+					if (!isset($library_config['key'])) {
+						$class = end(explode('\\', $class));
+						$key   = (string) Flourish\Text::create($class)->underscorize();
+					} else {
+						$key   = $library_config['key'];
+					}
+
+					if (isset($this->roots[$key])) {
+						throw new Flourish\ProgrammerException(
+							'Library with key "%s" already exists',
 							$key
 						);
 					}
 
-					if ($root) {
-						$this->setRoot($key, $root);
+					$this->setRoot($key, $root);
+
+					if (isset($this->loaders[$class])) {
+						throw new Flourish\ProgrammerException(
+							'Library with base class "%s" already exists',
+							$class
+						);
 					}
+
+					$this->loaders[$class] = $root;
 				}
 			}
 
@@ -766,6 +789,7 @@
 			//
 			// This is our compatibility standard.  It ignores namespaces altogether
 			//
+
 			if ($standard == NULL) {
 				$class = ltrim($class, '\\');
 				$parts = explode('\\', $class);
