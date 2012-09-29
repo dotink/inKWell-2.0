@@ -10,10 +10,11 @@
 	 * @dependency Dotink\Inkwell\Controller
 	 */
 
+	use Dotink\Inkwell;
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
 
-	class <%= self::getInfo('class', TRUE) %> extends Dotink\Inkwell\Controller
+	class <%= self::getInfo('class', TRUE) %> extends Inkwell\Controller
 	{
 		/**
 		 * Initialize the class
