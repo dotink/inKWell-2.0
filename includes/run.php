@@ -8,7 +8,7 @@
 	$request  = $app->create('request',  'Dotink\Interfaces\Request');
 	$response = $app->run($request);
 
-	return $request->checkMethod(HEAD)
+	return $request->checkMethod(HTTP\HEAD)
 		? $response->send(TRUE)
 		: $response->send();
 }

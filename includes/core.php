@@ -386,7 +386,7 @@
 				? self::DEFAULT_WRITE_DIRECTORY
 				: $config['write_directory'];
 
-			if (!preg_match(REGEX_ABSOLUTE_PATH, $write_directory)) {
+			if (!preg_match(REGEX\ABSOLUTE_PATH, $write_directory)) {
 				$this->writeDirectory = $this->getRoot() . DS . $write_directory;
 			} else {
 				$this->writeDirectory = $write_directory;
@@ -413,7 +413,7 @@
 					$directory = $this->roots[NULL];
 				} else {
 					$default   = str_replace('/', DS, rtrim($default, '/\\' . DS));
-					$directory = !preg_match(REGEX_ABSOLUTE_PATH, $default)
+					$directory = !preg_match(REGEX\ABSOLUTE_PATH, $default)
 						? $this->roots[NULL] . DS . $directory
 						: $default;
 				}
@@ -441,7 +441,7 @@
 		{
 			if ($sub_directory) {
 				$sub_directory   = str_replace('/', DS, $sub_directory);
-				$write_directory = !preg_match(REGEX_ABSOLUTE_PATH, $sub_directory)
+				$write_directory = !preg_match(REGEX\ABSOLUTE_PATH, $sub_directory)
 					? $this->getWriteDirectory() . DS . $sub_directory
 					: $sub_directory;
 			} else {
@@ -738,7 +738,7 @@
 		{
 			$key               = strtolower($key);
 			$root_directory    = str_replace('/', DS, rtrim($root_directory, '/\\' . DS));
-			$this->roots[$key] = !preg_match(REGEX_ABSOLUTE_PATH, $root_directory)
+			$this->roots[$key] = !preg_match(REGEX\ABSOLUTE_PATH, $root_directory)
 				? realpath($this->getRoot() . DS . $root_directory)
 				: realpath($root_directory);
 
