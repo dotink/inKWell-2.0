@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	//
 	// Redirect maps take the following format:
 	//
@@ -26,7 +26,7 @@
 	// The above would redirect /articles/my_awesome_article to /blog/articles/my_awesome_article
 	//
 
-	return Config::create('Core', [
+	return Config::create(['Core'], [
 
 		//
 		// Permanent redirects.

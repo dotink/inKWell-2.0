@@ -1,6 +1,6 @@
-<?php namespace Dotink\Inkwell {
-
-	return Config::create(['Extension'], [
+<?php namespace Dotink\Inkwell
+{
+	return Config::create(['Library'], [
 
 		//
 		// The class which we configure

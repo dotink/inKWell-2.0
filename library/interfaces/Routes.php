@@ -13,6 +13,6 @@
 
 	interface Routes
 	{
-		public function link($route, $action);
+
 	}
 }

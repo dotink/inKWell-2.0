@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	//
 	// Route maps take the following format:
 	//

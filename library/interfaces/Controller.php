@@ -11,7 +11,10 @@
 	 * @package Dotink\Interfaces
 	 */
 
-	interface Controller extends \ArrayAccess
+	use ArrayAccess;
+
+	interface Controller extends ArrayAccess
 	{
+		
 	}
 }

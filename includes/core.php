@@ -15,8 +15,9 @@
 
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
+	use ArrayAccess;
 
-	class IW implements \ArrayAccess
+	class IW implements ArrayAccess
 	{
 		const INITIALIZATION_METHOD    = '__init';
 		const MATCH_CLASS_METHOD       = '__match';

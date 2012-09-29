@@ -1,5 +1,5 @@
-<?php namespace Dotink\Inkwell {
-
+<?php namespace Dotink\Inkwell
+{
 	return Config::create(['Core'], [
 
 		//

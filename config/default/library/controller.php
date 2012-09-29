@@ -1,6 +1,6 @@
-<?php namespace Dotink\Inkwell {
-
-	return Config::create(['Extension', '@autoloading'], [
+<?php namespace Dotink\Inkwell
+{
+	return Config::create(['Library', '@autoloading'], [
 
 		//
 		// The class which we configure

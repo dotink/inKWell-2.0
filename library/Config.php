@@ -13,8 +13,9 @@
 	 */
 
 	use Dotink\Flourish;
+	use Dotink\Interfaces;
 
-	class Config
+	class Config implements Interfaces\Config
 	{
 		const DEFAULT_CONFIG          = 'default';
 		const CONFIG_BY_TYPES_ELEMENT = '__TYPES__';

@@ -1,7 +1,7 @@
 <?php namespace Dotink\Interfaces
 {
 	/**
-	 * The Dotink Request interface
+	 * The Dotink Config interface
 	 *
 	 * @copyright Copyright (c) 2012, Matthew J. Sahagian
 	 * @author Matthew J. Sahagian [mjs] <gent@dotink.org>
@@ -11,8 +11,8 @@
 	 * @package Dotink\Interfaces
 	 */
 
-	interface Request
+	interface Config
 	{
-		
+
 	}
 }

@@ -1,6 +1,6 @@
-<?php namespace Dotink\Inkwell {
-
-	return Config::create('Core', [
+<?php namespace Dotink\Inkwell
+{
+	return Config::create(['Core'], [
 
 		//
 		// Autoloading standards allow you to register transformation functions or methods
