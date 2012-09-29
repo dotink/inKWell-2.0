@@ -132,49 +132,6 @@
 
 
 		/**
-		 * Construct a configuration object
-		 *
-		 * This does not inherently build the configuration.
-		 */
-		public function __construct($directory, $name = NULL)
-		{
-			$directory  = rtrim($directory, '/\\' . DS);
-			$directory  = str_replace('/', DS, $directory);
-
-			if (!preg_match(REGEX_ABSOLUTE_PATH, $directory)) {
-				throw new Flourish\ProgrammerException(
-					'Directory "%s" is invalide, must be absolute path',
-					$directory
-				);
-			}
-
-			$this->name       = $name ?: self::DEFAULT_CONFIG;
-			$this->cacheFile  = $directory . DS . '.' . $this->name;
-			$this->configPath = $directory . DS . $this->name;
-			$this->data       = [self::CONFIG_BY_TYPES_ELEMENT => []];
-
-			if (is_readable($this->cacheFile) && ($data = @unserialize($this->cacheFile))) {
-				$this->data = $data;
-
-				//
-				// We want to return immediately if we got good data from our cache
-				//
-
-				return $this;
-			}
-
- 			if (!is_readable($this->configPath)) {
-				throw new Flourish\ProgrammerException(
-					'Cannot build configuration, directory "%s" is not readable.',
-					$directory
-				);
- 			}
-
-			return $this->build();
-		}
-
-
-		/**
 		 * Gets the defined/translated class for a particular element ID
 		 *
 		 * @access public
@@ -297,6 +254,48 @@
 			return $data;
 		}
 
+
+		/**
+		 * Load a configuration
+		 *
+		 * @param string $directory The directory to load configs from
+		 * @param string $name The name of the config to load
+		 * @return Config The config object for method chaining
+		 */
+		public function load($directory, $name = NULL)
+		{
+			$directory  = rtrim($directory, '/\\' . DS);
+			$directory  = str_replace('/', DS, $directory);
+
+			if (!preg_match(REGEX\ABSOLUTE_PATH, $directory)) {
+				throw new Flourish\ProgrammerException(
+					'Directory "%s" is invalide, must be absolute path',
+					$directory
+				);
+			}
+
+			$this->name       = $name ?: self::DEFAULT_CONFIG;
+			$this->cacheFile  = $directory . DS . '.' . $this->name;
+			$this->configPath = $directory . DS . $this->name;
+			$this->data       = [self::CONFIG_BY_TYPES_ELEMENT => []];
+
+			if (is_readable($this->cacheFile) && ($data = @unserialize($this->cacheFile))) {
+				$this->data = $data;
+
+			} elseif (is_readable($this->configPath)) {
+				$this->build();
+
+ 			} else {
+				throw new Flourish\ProgrammerException(
+					'Cannot build configuration, directory "%s" is not readable.',
+					$directory
+				);
+ 			}
+
+			return $this;
+		}
+
+
 		/**
 		 * Maps a class to an element ID using the config path
 		 *
@@ -333,7 +332,7 @@
 			if (!$file) {
 				$file = $this->cacheFile;
 			} else {
-				$file = !preg_match(REGEX_ABSOLUTE_PATH, $file)
+				$file = !preg_match(REGEX\ABSOLUTE_PATH, $file)
 					? dirname($this->cacheFile) . $file
 					: $file;
 			}
@@ -355,7 +354,9 @@
 		 * cached version, please see the reset() method.
 		 *
 		 * @access public
-		 *
+		 * @param string $directory The directory to build from
+		 * @param integer $depth The depth of the build process (used internally / recursively)
+		 * @return void
 		 */
 		private function build($directory = NULL, $depth = 0)
 		{
@@ -433,8 +434,6 @@
 
 				}
 			}
-
-			return $this;
 		}
 	}
 }
