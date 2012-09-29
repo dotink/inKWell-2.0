@@ -91,6 +91,15 @@
 
 
 		/**
+		 * Whether or not we should allow for restless urls, i.e. ending / is the same as without
+		 *
+		 * @access private
+		 * @var boolean
+		 */
+		private $restless = FALSE;
+
+
+		/**
 		 * Compiles a route, replacing valid tokens with match patterns
 		 *
 		 * @static
@@ -263,6 +272,10 @@
 		public function link($route, $action)
 		{
 			list($pattern, $params) = self::compile($route);
+
+			if ($this->restless) {
+				$pattern .= '[/]?';
+			}
 
 			if (isset($this->links[$pattern])) {
 
