@@ -288,15 +288,12 @@
 		/**
 		 * Constructs a new response
 		 *
-		 * The response state will be set to not found.  To modify the response, use the
-		 * __invoke() functionality.
-		 *
 		 * @access public
 		 * @return void
 		 */
-		public function __construct()
+		public function __construct($status = NULL, $type = NULL, $headers = array(), $view = NULL)
 		{
-			$this('not_found');
+			$this($status, $type, $headers, $view);
 		}
 
 		/**
@@ -315,21 +312,22 @@
 		 * @param array $headers
 		 * @param string $view
 		 */
-		public function __invoke($status, $type = NULL, $headers = array(), $view = NULL)
+		public function __invoke($status = NULL, $type = NULL, $headers = array(), $view = NULL)
 		{
-			$this->status = strtolower($status);
-			$this->code   = self::translateCode($this->status);
+			$this->status = $status
+				? strtolower($status)
+				: 'not_found';
+
+			$this->code = self::translateCode($this->status);
 
 			switch (func_num_args()) {
 				case 2:
 					$this->type    = NULL;
-					$this->headers = array();
 					$this->view    = func_get_arg(1);
 					break;
 
 				case 3:
 					$this->type    = strtolower($type);
-					$this->headers = array();
 					$this->view    = func_get_arg(2);
 					break;
 
@@ -425,7 +423,6 @@
 					$this->view = Flourish\Text::create($this->view)->compose();
 				} else {
 					$this->status = 'no_content';
-					$this->view   = NULL;
 				}
 			}
 
@@ -472,7 +469,7 @@
 				: sprintf('Status: %d %s', $this->code, $this->status)
 			);
 
-	
+
 			$headers    = array();
 			$text_types = [
 				'text/html', 'application/json', 'application/xhtml+xml', 'application/xml',
@@ -508,7 +505,7 @@
 
 				print($this->view);
 			}
-  
+
 			return $this->code;
 		}
 	}
