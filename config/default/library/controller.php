@@ -21,13 +21,6 @@
 		'root_directory' => 'user/controllers',
 
 		//
-		// The wildcard autoloader means to use this classes __match() method and attempt to load
-		// from its root directory.  Removing it will remove controller autoloading.
-		//
-
-		'map' => ['*'],
-
-		//
 		// The default accept types in preferred order.
 		//
 

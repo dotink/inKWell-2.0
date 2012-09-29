@@ -21,12 +21,5 @@
 
 		'root_directory' => 'user/models',
 
-		//
-		// The wildcard autoloader means to use this classes __match() method and attempt to load
-		// from its root directory.  Removing it will remove model autoloading.
-		//
-
-		'map' => ['*'],
-
 	]);
 }

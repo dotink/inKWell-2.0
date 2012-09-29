@@ -18,14 +18,6 @@
 		// The directory relative to application root in which user defined record sets are stored.
 		//
 
-		'root_directory' => 'user/models/sets',
-
-		//
-		// The wildcard autoloader means to use this classes __match() method and attempt to load
-		// from its root directory.  Removing it will remove model autoloading.
-		//
-
-		'map' => ['*'],
-
+		'root_directory' => 'user/models/sets'
 	]);
 }
