@@ -1,6 +1,5 @@
 <?php namespace Dotink\Inkwell
 {
-
 	//
 	// This file contains constants defined as part of inKWell.  You can add your own constants
 	// here, but be aware of namespacing.
