@@ -5,7 +5,7 @@
 	// the status.
 	//
 
-	$request  = $app->create('request',  'Dotink\Interfaces\Request');
+	$request  = $app->create('request', ['Dotink\Interfaces\Request']);
 	$response = $app->run($request);
 
 	return $request->checkMethod(HTTP\HEAD)
