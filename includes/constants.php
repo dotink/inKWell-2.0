@@ -1,26 +1,43 @@
 <?php namespace Dotink\Inkwell
 {
-	//
-	// UTILITY SHORTHANDS
-	//
-
-	define(__NAMESPACE__ . '\LB', PHP_EOL);
-	define(__NAMESPACE__ . '\DS', DIRECTORY_SEPARATOR);
 
 	//
-	// HTTP METHODS
+	// This file contains constants defined as part of inKWell.  You can add your own constants
+	// here, but be aware of namespacing.
 	//
 
-	define(__NAMESPACE__ . '\HTTP\GET',    'get');
-	define(__NAMESPACE__ . '\HTTP\POST',   'post');
-	define(__NAMESPACE__ . '\HTTP\PUT',    'put');
-	define(__NAMESPACE__ . '\HTTP\DELETE', 'delete');
-	define(__NAMESPACE__ . '\HTTP\HEAD',   'head');
+	foreach ([
 
-	//
-	// REGULAR EXPRESSIONS
-	//
+		//
+		// UTILITY SHORTHANDS
+		//
 
-	define(__NAMESPACE__ . '\REGEX\ABSOLUTE_PATH', '#^(/|\\\\|[a-z]:(\\\\|/)|\\\\|//)#i');
+		'LB' => PHP_EOL,
+		'DS' => DIRECTORY_SEPARATOR,
+
+		//
+		// HTTP METHODS
+		//
+
+		'HTTP\GET'    => 'get',
+		'HTTP\POST'   => 'post',
+		'HTTP\PUT'    => 'put',
+		'HTTP\DELETE' => 'delete',
+		'HTTP\HEAD'   => 'head',
+
+		//
+		// REGULAR EXPRESSIONS
+		//
+
+		'REGEX\ABSOLUTE_PATH' => '#^(/|\\\\|[a-z]:(\\\\|/)|\\\\|//)#i',
+
+	] as $constant => $value) {
+
+		//
+		// All constants defined in the array above will be part of the Dotink\Inkwell namespace
+		//
+
+		define(__NAMESPACE__ . '\\' . $constant, $value);
+	}
 }
 
