@@ -1,4 +1,4 @@
-<?php namespace <%= self::getAppInfo('vendor', TRUE) %>\<%= self::getAppInfo($class, TRUE) %>
+<?php namespace <%= self::getAppInfo('vendor', TRUE) %>\<%= self::getAppInfo('name', TRUE) %>
 {
 	/**
 	 * The <%= self::getInfo('class') %> class.
