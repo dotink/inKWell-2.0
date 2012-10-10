@@ -90,21 +90,6 @@
 
 
 		/**
-		 * Initializes a new inKWell application
-		 *
-		 * @static
-		 * @access public
-		 * @param string $root_directory The root directory for the application
-		 * @param Callable $config_callback The configuration callback
-		 * @return IW A new instance of an inKWell application
-		 */
-		static public function create($root_directory, $library_directory = 'library')
-		{
-			return new self($root_directory, $library_directory);
-		}
-
-
-		/**
 		 * Transforms a class to the inKWell standard
 		 *
 		 * @static
@@ -145,21 +130,18 @@
 		/**
 		 * Creates a new inKWell Application.
 		 *
-		 * The constructor cannot be called directly.  Instead, applications should be generated
-		 * using the iw::init() method which runs through initialization process as well.
-		 *
-		 * @access private
+		 * @access public
 		 * @param string $root_directory The root directory for the application
 		 * @param string $library_directory The inKWell core library directory
 		 * @return void
 		 */
-		private function __construct($root_directory, $library_directory)
+		public function __construct($root_directory, $library_directory = 'library')
 		{
 			//
 			// Set our application root
 			//
 
-			$this->setRoot(NULL, $root_directory);
+			$this->addRoot(NULL, $root_directory);
 
 			//
 			// Our initial loader map is established.  This will use compatibility transformations,
@@ -176,16 +158,53 @@
 
 
 		/**
-		 * Adds an autoloading standard
+		 * Adds an autoloading standard.  This will overload any loading standard with the same
+		 * key.
 		 *
 		 * @access public
 		 * @param string $standard The standard to register as
 		 * @param Callable $transform_callback The callback to register for transformation
 		 * @return void
 		 */
-		public function addLoadingStandard($standard, Callable $transform_callback)
+		public function addLoadingStandard($standard, $transform_callback)
 		{
+			$standard = strtolower($standard);
 
+			if (!is_callable($transform_callback)) {
+				throw new Flourish\ProgrammerException(
+					'Cannot set loading standard "%s", callback is not valid',
+					$standard
+				);
+			}
+
+			return $this->loadingStandards[$standard] = $transform_callback;
+		}
+
+
+		/**
+		 * Adds a Root Directory.  This will overload any root directory with the same key.
+		 *
+		 * @access public
+		 * @param string $key The key to set a root directory for
+		 * @param string $root_directory The root directory
+		 * @return void
+		 */
+		public function addRoot($key, $root_directory)
+		{
+			$key            = strtolower($key);
+			$root_directory = str_replace('/', DS, rtrim($root_directory, '/\\' . DS));
+			$root_directory = !preg_match(REGEX\ABSOLUTE_PATH, $root_directory)
+				? realpath($this->getRoot() . DS . $root_directory)
+				: realpath($root_directory);
+
+			if (!is_dir($root_directory)) {
+				throw new Flourish\ProgrammerException(
+					'Cannot set root directory "%s", directory does not exist',
+					$root_directory
+				);
+			}
+
+			return $this->roots[$key] = $root_directory;
 		}
 
 
@@ -271,7 +290,8 @@
 			$config      = $this->create('config');
 
 			$config->load($config_root, $config_name);
-			$this->setRoot('config', $config_root);
+
+			$this->addRoot('config', $config_root);
 
 			//
 			// Set up our libraries.
@@ -311,7 +331,7 @@
 						);
 					}
 
-					$this->setRoot($key, $root);
+					$this->addRoot($key, $root);
 
 					if (isset($this->loaders[$class])) {
 						throw new Flourish\ProgrammerException(
@@ -329,11 +349,12 @@
 			//
 
 			foreach ($config->getAllByType('array', '@autoloading') as $autoloading_config) {
+
 				settype($autoloading_config['standards'], 'array');
 				settype($autoloading_config['map'], 'array');
 
 				foreach ($autoloading_config['standards'] as $standard => $transform_callback) {
-					$this->loadingStandards[strtolower($standard)] = $transform_callback;
+					$this->addLoadingStandard($standard, $transform_callback);
 				}
 
 				$this->loaders = array_merge($this->loaders, $autoloading_config['map']);
@@ -482,8 +503,7 @@
 		/**
 		 * Initializes a class by calling its __init() method if available
 		 *
-		 * @static
-		 * @access protected
+		 * @access public
 		 * @param string $class The class to initialize
 		 * @return bool Whether or not the initialization was successful
 		 */
@@ -589,7 +609,7 @@
 					}
 
 					$base_dir     = trim($target, '/\\' . DS);
-					$class_path   = $this->transformClass($standard, $class);
+					$class_path   = $this->transformClassToPath($class, $standard);
 					$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
 
 					if (file_exists($include_file)) {
@@ -743,36 +763,7 @@
 				}
 			}
 
-			$response = $routes->run($request, $response);
-
-			return $response;
-		}
-
-
-		/**
-		 * Sets a Root Directory
-		 *
-		 * @access protected
-		 * @param string $key The key to set a root directory for
-		 * @param string $root_directory The root directory
-		 * @return void
-		 */
-		protected function setRoot($key, $root_directory)
-		{
-			$key               = strtolower($key);
-			$root_directory    = str_replace('/', DS, rtrim($root_directory, '/\\' . DS));
-			$this->roots[$key] = !preg_match(REGEX\ABSOLUTE_PATH, $root_directory)
-				? realpath($this->getRoot() . DS . $root_directory)
-				: realpath($root_directory);
-
-			if (!is_dir($this->roots[$key])) {
-				throw new Flourish\ProgrammerException(
-					'Cannot set root directory "%s", directory does not exist',
-					$root_directory
-				);
-			}
-
-			return $this->roots[$key];
+			return $routes->run($request, $response);
 		}
 
 
@@ -780,33 +771,42 @@
 		 * Transforms a class name to a given (registered) standard
 		 *
 		 * @access private
-		 * @param string $standard The standard to use (case insensitive)
 		 * @param string $class The class to transform
-		 * @return string The transformed class to file according to the standard
+		 * @param string $standard The standard to use (case insensitive), NULL is default/compat
+		 * @return string The transformed class to file path according to the standard
 		 */
-		private function transformClass($standard, $class)
+		private function transformClassToPath($class, $standard = NULL)
 		{
-			//
-			// This is our compatibility standard.  It ignores namespaces altogether
-			//
-
 			if ($standard == NULL) {
+
+				//
+				// This is our compatibility standard.  It ignores namespaces altogether
+				//
+
 				$class = ltrim($class, '\\');
 				$parts = explode('\\', $class);
+				$path  = array_pop($parts) . '.php';
 
-				return array_pop($parts) . '.php';
+			} else {
+
+				//
+				// If a standard is defined, we want to use the registered callback for
+				// transformation.
+				//
+
+				$standard = strtolower($standard);
+
+				if (!isset($this->loadingStandards[$standard])) {
+					throw new Flourish\ProgrammerException(
+						'Cannot transform class using "%s", standard not registered',
+						$standard
+					);
+				}
+
+				$path = call_user_func($this->loadingStandards[$standard], $class);
 			}
 
-			$standard = strtolower($standard);
-
-			if (!isset($this->loadingStandards[$standard])) {
-				throw new Flourish\ProgrammerException(
-					'Cannot transform class using "%s", standard not registered',
-					$standard
-				);
-			}
-
-			return call_user_func($this->loadingStandards[$standard], $class);
+			return $path;
 		}
 	}
 }
