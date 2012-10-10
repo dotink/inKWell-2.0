@@ -25,8 +25,8 @@
 		//
 
 		'standards' => [
-			'IW'   => 'Dotink\Inkwell\IW::transformClassToIW',
-			'PSR0' => 'Dotink\Inkwell\IW::transformClassToPSR0'
+			'IW'   => __NAMESPACE__ . '\IW::transformClassToIW',
+			'PSR0' => __NAMESPACE__ . '\IW::transformClassToPSR0'
 		],
 
 		'map' => [
