@@ -9,6 +9,16 @@
 	$response = $app->run($request);
 
 	return $request->checkMethod(HTTP\HEAD)
+
+		//
+		// Return only the headers
+		//
+
 		? $response->send(TRUE)
+
+		//
+		// Return the full headers and body
+		//
+
 		: $response->send();
 }
