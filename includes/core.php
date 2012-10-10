@@ -26,8 +26,10 @@
 		const DEFAULT_WRITE_DIRECTORY  = 'assets';
 		const DEFAULT_EXECUTION_MODE   = 'development';
 
-		const ROUTES_INTERFACE         = 'Dotink\Interfaces\Routes';
+		const CONFIG_INTERFACE         = 'Dotink\Interfaces\Config';
 		const RESPONSE_INTERFACE       = 'Dotink\Interfaces\Response';
+		const ROUTES_INTERFACE         = 'Dotink\Interfaces\Routes';
+
 
 		/**
 		 * Child objects of the application; accessible via array access
@@ -287,7 +289,7 @@
 		public function config($config_name = NULL, $config_root = NULL)
 		{
 			$config_root = $config_root ?: $this->getRoot() . DS . self::DEFAULT_CONFIG_DIRECTORY;
-			$config      = $this->create('config');
+			$config      = $this->create('config', [self::CONFIG_INTERFACE]);
 
 			$config->load($config_root, $config_name);
 
@@ -738,8 +740,8 @@
 		 */
 		public function run(Interfaces\Request $request)
 		{
-			$routes   = $this->create('routes',   self::ROUTES_INTERFACE);
-			$response = $this->create('response', self::RESPONSE_INTERFACE);
+			$routes   = $this->create('routes',   [self::ROUTES_INTERFACE]);
+			$response = $this->create('response', [self::RESPONSE_INTERFACE]);
 
 			$response_configs = $this['config']->getAllByType('array', '@response');
 			$redirect_configs = $this['config']->getAllByType('array', '@redirects');
