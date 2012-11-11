@@ -17,7 +17,7 @@
 	class Response implements Interfaces\Inkwell, Interfaces\Response
 	{
 		const DEFAULT_CACHE_DIRECTORY = 'cache/.responses';
-		const DEFAULT_RESPONSE        = 'not_found';
+		const DEFAULT_RESPONSE        = HTTP\NOT_FOUND;
 
 
 		/**
@@ -38,31 +38,31 @@
 		 * @var array
 		 */
 		static private $states = [
-			'ok' => [
+			HTTP\OK => [
 				'code' => 200,
 				'body' => NULL
 			],
-			'no_content' => [
+			HTTP\NO_CONTENT => [
 				'code' => 204,
 				'body' => NULL
 			],
-			'not_found' => [
+			HTTP\NOT_FOUND => [
 				'code' => 404,
 				'body' => 'The requested resource could not be found'
 			],
-			'not_allowed' => [
+			HTTP\NOT_ALLOWED => [
 				'code' => 405,
 				'body' => 'The requested resource does not support this method'
 			],
-			'not_acceptable' => [
+			HTTP\NOT_ACCEPTABLE => [
 				'code' => 406,
 				'body' => 'The requested resource is not available in the accepted format'
 			],
-			'internal_server_error' => [
+			HTTP\SERVER_ERROR => [
 				'code' => 500,
 				'body' => 'The requested resource is not available due to an internal error'
 			],
-			'service_unavailable' => [
+			HTTP\UNAVAILABLE => [
 				'code' => 503,
 				'body' => 'The requested resource is temporarily unavailable'
 			]
@@ -243,8 +243,6 @@
 		 */
 		static protected function translateCode($state)
 		{
-			$state = strtolower($state);
-
 			if (isset(self::$states[$state]['code'])) {
 				$response_code = self::$states[$state]['code'];
 
@@ -314,9 +312,9 @@
 		 */
 		public function __invoke($status = NULL, $type = NULL, $headers = array(), $view = NULL)
 		{
-			$this->status = $status
-				? strtolower($status)
-				: 'not_found';
+			$this->status = !$status
+				? self::DEFAULT_RESPONSE
+				: $status;
 
 			$this->code = self::translateCode($this->status);
 
@@ -442,7 +440,6 @@
 			}
 
 			$this->view   = (string) $this->view;
-			$this->status = ucwords(Flourish\Text::create($this->status)->humanize());
 			$this->code   = isset($aliases[$version][$this->code])
 				? $aliases[$version][$this->code]
 				: $this->code;

@@ -17,6 +17,8 @@
 
 	class Request implements Interfaces\Inkwell, Interfaces\Request
 	{
+		const MAP_REGEX = '#^(?:\(([a-zA-Z]+)\))?\s+([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)$#';
+
 		/**
 		 * The accept header of this request
 		 *
@@ -422,7 +424,7 @@
 
 			if ($data == NULL) {
 				if ($this->checkMethod(HTTP\GET)) {
-					$this->data == $_GET;
+					$this->data = $_GET;
 				} else{
 					$this->data = array_replace_recursive($_GET, $_POST);
 
@@ -822,6 +824,44 @@
 		public function getPath()
 		{
 			return $this->url->getPath();
+		}
+
+
+		/**
+		 * Map request parameters to an array
+		 *
+		 * This method allows you to provide an array styled extraction map and receive back a
+		 * number of get parameters as an associative array.  The extraction map allows for type-
+		 * casting parameters and providing default values as you would with the get() method.
+		 *
+		 * extract($request->map([
+		 *    '(string)  query' => NULL,
+		 *    '(integer) page'  => 1
+		 * ]));
+		 *
+		 * @access public
+		 * @param array $extraction_map The map to use
+		 * @return array An associative array of parameter names to request values
+		 */
+		public function map($extraction_map)
+		{
+			$value_map = [];
+
+			foreach ($extraction_map as $lookup => $default_value) {
+				if (!preg_match_all(self::MAP_REGEX, $lookup, $matches)) {
+					throw new Flourish\ProgrammerException(
+						'Invalid extraction map key %s',
+						$lookup
+					);
+				}
+
+				$type = $matches[1][0] ? $matches[1][0] : NULL;
+				$name = $matches[2][0];
+
+				$value_map[$name] = $this->get($name, $type, $default_value);
+			}
+
+			return $value_map;
 		}
 
 

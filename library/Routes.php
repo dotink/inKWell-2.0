@@ -28,6 +28,7 @@
 		 * @var array
 		 */
 		static private $patterns = [
+			'+' => '([1-9]|[1-9][0-9]+)',
 			'#' => '([-]?(?:[0-9]+))',
 			'%' => '([-]?[0-9]+\.[0-9]+',
 			'!' => '([^/]+)',
@@ -420,7 +421,7 @@
 						}
 
 						$response = ($output = ob_get_clean())
-							? $response('ok', NULL, [], $output)
+							? $response(HTTP\OK, NULL, [], $output)
 							: $response->resolve($controller_response);
 					}
 

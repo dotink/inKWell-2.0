@@ -29,62 +29,62 @@
 			// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
 			//
 
-			'ok' => [
+			HTTP\OK => [
 				'code' => 200,
 				'body' => NULL
 			],
 
-			'created' => [
+			HTTP\CREATED => [
 				'code' => 201,
 				'body' => NULL
 			],
 
-			'accepted' => [
+			HTTP\ACCEPTED => [
 				'code' => 202,
 				'body' => NULL
 			],
 
-			'no_content' => [
+			HTTP\NO_CONTENT => [
 				'code' => 204,
 				'body' => NULL
 			],
 
-			'bad_request' => [
+			HTTP\BAD_REQUEST => [
 				'code' => 400,
 				'body' => 'The requested could not be understood'
 			],
 
-			'not_authorized' => [
+			HTTP\NOT_AUTHORIZED => [
 				'code' => 401,
 				'body' => 'The requested resource requires authorization'
 			],
 
-			'forbidden' => [
+			HTTP\FORBIDDEN => [
 				'code' => 403,
 				'body' => 'You do not have permission to view the requested resource'
 			],
 
-			'not_found' => [
+			HTTP\NOT_FOUND => [
 				'code'    => 404,
 				'body'    => 'The requested resource could not be found'
 			],
 
-			'not_allowed' => [
+			HTTP\NOT_ALLOWED => [
 				'code' => 405,
 				'body' => 'The requested resource does not support this method'
 			],
 
-			'not_acceptable' => [
+			HTTP\NOT_ACCEPTABLE => [
 				'code' => 406,
 				'body' => 'The requested resource is not available in the accepted parameters'
 			],
 
-			'internal_server_error' => [
+			HTTP\SERVER_ERROR => [
 				'code' => 500,
 				'body' => 'The requested resource is not available due to an internal error'
 			],
 
-			'service_unavailable' => [
+			HTTP\UNAVAILABLE => [
 				'code' => 503,
 				'body' => 'The requested resource is temporarily unavailable'
 			]
