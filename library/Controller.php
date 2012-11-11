@@ -19,6 +19,39 @@
 	{
 		use Traits\Container;
 
+		/**
+		 *
+		 */
+		protected function acceptTypes($accept_types)
+		{
+			if (!is_array($accept_types)) {
+				$accept_types = func_get_args();
+			}
+
+
+		}
+
+
+		/**
+		 *
+		 */
+		protected function allowMethods($allowed_methods)
+		{
+			if (!is_array($allowed_methods)) {
+				$allowed_methods = func_get_args();
+			}
+
+			$allowed_methods = array_map('strtolower', $allowed_methods);
+			$current_method  = $this['request']->getMethod();
+
+			if (!in_array($current_method, $allowed_methods)) {
+				$this['response']->setHeader('Allow', implode(', ', $allowed_methods));
+				$this->triggerError('not_allowed');
+			}
+
+			return $current_method;
+		}
+
 
 		/**
 		 * Check whether or not a given class is the entry controller
@@ -55,7 +88,10 @@
 
 
 		/**
+		 * Executes a sub request
 		 *
+		 * @access protected
+		 * @return Response
 		 */
 		protected function exec($method, $type, $url, $params)
 		{
@@ -83,7 +119,7 @@
 		/**
 		 *
 		 */
-		protected function triggerError($error, $message = NULL)
+		protected function triggerError($error, $headers = array(), $message = NULL)
 		{
 			$this['response']($error, $message);
 

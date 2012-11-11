@@ -105,7 +105,7 @@
 			$parts = explode('\\', $class);
 			$class = array_pop($parts);
 			$path  = implode(DS, $parts);
-			$path  = (new Flourish\Text($path))->underscorize();
+			$path  = Flourish\Text::create($path)->underscorize();
 
 			return $path . DS . $class . '.php';
 		}
@@ -193,8 +193,8 @@
 		 */
 		public function addRoot($key, $root_directory)
 		{
-			$key            = strtolower($key);
-			$root_directory = str_replace('/', DS, rtrim($root_directory, '/\\' . DS));
+			$key            =  strtolower($key);
+			$root_directory =  str_replace('/', DS, rtrim($root_directory, '/\\' . DS));
 			$root_directory = !preg_match(REGEX\ABSOLUTE_PATH, $root_directory)
 				? realpath($this->getRoot() . DS . $root_directory)
 				: realpath($root_directory);
@@ -237,38 +237,56 @@
 		{
 			$alias = strtolower($alias);
 
+			if (!isset($this->factories[$alias])) {
+				throw new Flourish\ProgrammerException(
+					'No classes exist for the alias "%s"',
+					$alias
+				);
+			}
+
 			settype($interfaces, 'array');
 
 			foreach ($this->factories[$alias] as $class => $factory) {
+
 				if (!class_exists($class)) {
 					continue;
 				}
 
-				$class_interfaces = class_implements($class);
+				if (count(array_diff($interfaces, class_implements($class)))) {
+					continue;
+				}
 
-				if (!count(array_diff($interfaces, $class_interfaces))) {
-					if ($factory === NULL) {
+				//
+				// Only attempt to build if the class exists and it implements the requested
+				// interfaces.
+				//
+
+				if ($factory === NULL) {
 						$result = new $class();
 
-					} elseif (is_callable($factory)) {
+				} elseif (is_callable($factory)) {
 						$result = call_user_func_array($factory, array_slice(func_get_args(), 2));
 
-					} elseif (is_callable($factory = $class . '::' . $factory)) {
+				} elseif (is_callable($factory = $class . '::' . $factory)) {
 						$result = call_user_func_array($factory, array_slice(func_get_args(), 2));
 
-					} else {
-						continue;
-					}
+				} else {
 
-					if (!($result instanceof $class)) {
-						throw new Flourish\ProgrammerException(
-							'Fetched instance is not an instance of class "%s", bad factory',
-							$class
-						);
-					}
+					//
+					// Skip if the factory is not callable
+					//
 
-					return $result;
+					continue;
 				}
+
+				if (!($result instanceof $class)) {
+					throw new Flourish\ProgrammerException(
+						'Fetched instance is not an instance of class "%s", bad factory',
+						$class
+					);
+				}
+
+				return $result;
 			}
 
 			throw new Flourish\ProgrammerException(
