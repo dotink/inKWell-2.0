@@ -21,7 +21,7 @@
 	$app->register('config',   'Dotink\Inkwell\Config');
 	$app->register('request',  'Dotink\Inkwell\Request');
 	$app->register('response', 'Dotink\Inkwell\Response');
-	$app->register('routes',   'Dotink\Inkwell\Routes');
+	$app->register('router',   'Dotink\Inkwell\Router');
 
 	//
 	// Include configuration logic and return the app

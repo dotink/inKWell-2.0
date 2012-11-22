@@ -1,7 +1,7 @@
 <?php namespace Dotink\Interfaces
 {
 	/**
-	 * The Dotink Routes interface
+	 * The Dotink Router interface
 	 *
 	 * @copyright Copyright (c) 2012, Matthew J. Sahagian
 	 * @author Matthew J. Sahagian [mjs] <gent@dotink.org>
@@ -11,7 +11,7 @@
 	 * @package Dotink\Interfaces
 	 */
 
-	interface Routes
+	interface Router
 	{
 
 	}

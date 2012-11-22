@@ -28,7 +28,7 @@
 
 		const CONFIG_INTERFACE         = 'Dotink\Interfaces\Config';
 		const RESPONSE_INTERFACE       = 'Dotink\Interfaces\Response';
-		const ROUTES_INTERFACE         = 'Dotink\Interfaces\Routes';
+		const ROUTER_INTERFACE         = 'Dotink\Interfaces\Router';
 
 
 		/**
@@ -758,7 +758,7 @@
 		 */
 		public function run(Interfaces\Request $request)
 		{
-			$routes   = $this->create('routes',   [self::ROUTES_INTERFACE]);
+			$router   = $this->create('router',   [self::ROUTER_INTERFACE]);
 			$response = $this->create('response', [self::RESPONSE_INTERFACE]);
 
 			$response_configs = $this['config']->getAllByType('array', '@response');
@@ -768,7 +768,7 @@
 			foreach ($redirect_configs as $config) {
 				foreach ($config as $type => $redirects) {
 					foreach ($redirects as $route => $translation) {
-						$routes->redirect($route, $translation, $type);
+						$router->redirect($route, $translation, $type);
 					}
 				}
 			}
@@ -779,11 +779,11 @@
 					: NULL;
 
 				foreach ($config as $route => $action) {
-					$routes->link($base_url . $route, $action);
+					$router->link($base_url . $route, $action);
 				}
 			}
 
-			return $routes->run($request, $response);
+			return $router->run($request, $response);
 		}
 
 

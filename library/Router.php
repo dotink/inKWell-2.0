@@ -14,7 +14,7 @@
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
 
-	class Routes implements Interfaces\Routes
+	class Router implements Interfaces\Inkwell, Interfaces\Router
 	{
 		const CONTROLLER_INTERFACE = 'Dotink\Interfaces\Controller';
 		const REGEX_TOKEN          = '/\[[^\]]*\]/';
@@ -35,6 +35,16 @@
 			'$' => '([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)',
 			'*' => '(.+)'
 		];
+
+
+		/**
+		 * Whether or not we should allow for restless urls, i.e. ending / is the same as without
+		 *
+		 * @static
+		 * @access private
+		 * @var boolean
+		 */
+		static private $restless = FALSE;
 
 
 		/**
@@ -92,12 +102,18 @@
 
 
 		/**
-		 * Whether or not we should allow for restless urls, i.e. ending / is the same as without
+		 * Initialize the class
 		 *
-		 * @access private
-		 * @var boolean
+		 * @param Dotink\Inkwell\IW $app The application instance loading the class
+		 * @param array $config The configuration array for the class
+		 * @return boolean TRUE on success, FALSE on failure
 		 */
-		private $restless = FALSE;
+		static public function __init($app, Array $config = array())
+		{
+			if (isset($config['restless']) && $config['restless']) {
+				self::$restless = TRUE;
+			}
+		}
 
 
 		/**
@@ -209,7 +225,7 @@
 
 
 		/**
-		 * Construct a routes collection
+		 * Construct a router
 		 *
 		 * @access public
 		 * @return void
@@ -225,12 +241,12 @@
 		 *
 		 * If a only a single argument is given it will be checked against the class only
 		 *
-		 * @access protected
+		 * @access public
 		 * @param string $class The class to check
 		 * @param string $method The method to check
 		 * @return boolean TRUE if the parameters match this instance's entry and action
 		 */
-		protected function checkEntryAction($class, $method = NULL)
+		public function checkEntryAction($class, $method = NULL)
 		{
 			if (func_num_args == 1) {
 				return $this->entry == $class;
@@ -273,10 +289,6 @@
 		public function link($route, $action)
 		{
 			list($pattern, $params) = self::compile($route);
-
-			if ($this->restless) {
-				$pattern .= '[/]?';
-			}
 
 			if (isset($this->links[$pattern])) {
 
@@ -370,16 +382,20 @@
 		 */
 		public function run(Interfaces\Request $request, Interfaces\Response $response)
 		{
-			$this->errors = array();
+			$restless_uri = NULL;
 			$request_uri  = $request->getPath();
-			$request_uri  = $this->translateRedirect($request_uri, $redirect_type);
 
-			if ($redirect_type) {
+			if (self::$restless) {
+				$restless_uri = ($request_uri[strlen($request_uri) - 1] == '/')
+					? substr($request_uri, 0, -1)
+					: $request_uri . '/';				
+			}
+
+			if ($redirect_type = $this->translateRedirect($request_uri, $restless_uri)) {
 				$request->redirect($request_uri, $redirect_type);
 			}
 
 			foreach ($this->links as $pattern => $link) {
-
 				$this->controller = NULL;
 
 				try {
@@ -404,14 +420,14 @@
 							$controller_response = $action([
 								'request'  => $request,
 								'response' => $response,
-								'routes'   => $this
+								'router'   => $this
 							]);
 
 						} elseif (is_array($action)) {
 							$this->controller = new $action[0]([
 								'request'  => $request,
 								'response' => $response,
-								'routes'   => $this
+								'router'   => $this
 							]);
 
 							$controller_response = $this->controller->$action[1]();
@@ -423,6 +439,9 @@
 						$response = ($output = ob_get_clean())
 							? $response(HTTP\OK, NULL, [], $output)
 							: $response->resolve($controller_response);
+
+					} elseif (preg_match('#^' . $pattern . '$#', $restless_uri)) {
+						$request->redirect($restless_uri, 301);
 					}
 
 				} catch (Flourish\ContinueException $e) {
@@ -527,8 +546,10 @@
 		 * @param sring $url The URL to translate
 		 * @return integer|boolean The type of redirect that should occur, FALSE if none
 		 */
-		private function translateRedirect($request_uri, &$redirect_type = NULL)
+		private function translateRedirect(&$request_uri, $restless_uri)
 		{
+			$redirect_type = NULL;
+
 			foreach ($this->redirects as $pattern => $redirect) {
 				if (preg_match('#^' . $pattern . '$#', $request_uri, $matches)) {
 					array_shift($matches);
@@ -538,10 +559,16 @@
 					$redirect_type = $redirect['type'];
 
 					break;
+
+				} elseif (preg_match('#^' . $pattern . '$#', $restless_uri)) {
+					$redirect_type = $redirect['type'];
+					$request_uri   = $restless_uri;
+
+					break;
 				}
 			}
 
-			return $request_uri;
+			return $redirect_type;
 		}
 
 
