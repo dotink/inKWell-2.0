@@ -20,33 +20,50 @@
 		use Traits\Container;
 
 		/**
+		 * Restricts the acceptable mime types for a given action.
 		 *
+		 * Optionally this method can accept an array of acceptable mime types instead of separate
+		 * parameters.
+		 *
+		 * @throws YieldException When there are now acceptable types which match the Accept header
+		 *
+		 * @access protected
+		 * @param string $accept_type A type which is acceptable
+		 * @param ...
+		 * @return string The current best accept type
 		 */
-		protected function acceptTypes($accept_types)
+		protected function acceptTypes($accept_type)
 		{
-			if (!is_array($accept_types)) {
-				$accept_types = func_get_args();
-			}
-
+			$accept_types = !is_array($accept_type)
+				? func_get_args()
+				: $accept_type;
 
 		}
 
 
 		/**
+		 * Restricts the allowed methods for a given action.
 		 *
+		 * Optionally this method can accept an array of allowed methods instead of separate
+		 * parameters.
+		 *
+		 * @throws YieldException When there are no allowed methods which match the current method
+		 *
+		 * @access protected
+		 * @param string $allowed_method A method which is allowed
+		 * @param ...
+		 * @return string The current method for the request
 		 */
-		protected function allowMethods($allowed_methods)
+		protected function allowMethods($allowed_method)
 		{
-			if (!is_array($allowed_methods)) {
-				$allowed_methods = func_get_args();
-			}
-
-			$allowed_methods = array_map('strtolower', $allowed_methods);
 			$current_method  = $this['request']->getMethod();
+			$allowed_methods = !is_array($allowed_method)
+				? func_get_args()
+				: $allowed_method;
 
-			if (!in_array($current_method, $allowed_methods)) {
+			if (!in_array($current_method, array_map('strtolower', $allowed_methods))) {
 				$this['response']->setHeader('Allow', implode(', ', $allowed_methods));
-				$this->triggerError('not_allowed');
+				$this->triggerError(HTTP\NOT_ALLOWED);
 			}
 
 			return $current_method;
@@ -58,6 +75,7 @@
 		 *
 		 * @access protected
 		 * @param string $class The class to check
+		 * @return boolean TRUE if the entry point maches the class, FALSE otherwise
 		 */
 		protected function checkEntry($class)
 		{
@@ -74,7 +92,7 @@
 		 * @access protected
 		 * @param string $class The class to check
 		 * @param string $method The method to check
-		 * @return boolean TRUE if the parameters match the router's entry and action
+		 * @return boolean TRUE if the entry point matches the class and method, FALSE otherwise
 		 */
 		protected function checkEntryAction($class, $method = NULL)
 		{
@@ -104,24 +122,21 @@
 
 				return $this['routes']->run($request, $response);
 			}
-
-
-			$request_class = get_class($this['request']);
-			$request       = new Request();
-
-
-			if ($url[0] = '/') {
-
-			}
 		}
 
 
 		/**
+		 * Triggers a controller error by throwing a YieldException
 		 *
+		 * @access protected
+		 * @param string $error The error to trigger
+		 * @param array $headers The headers to pass in the response
+		 * @param string $message The body of the response
+		 * @return void
 		 */
 		protected function triggerError($error, $headers = array(), $message = NULL)
 		{
-			$this['response']($error, $message);
+			$this['response']($error, NULL, $headers, $message);
 
 			throw new Flourish\YieldException(
 				'Controller has yielded due to error: %s',
