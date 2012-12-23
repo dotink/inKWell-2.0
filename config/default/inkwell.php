@@ -20,9 +20,8 @@
 		'execution_mode' => 'development',
 
 		//
-		// This is the writable directory where caches, file uploads, images,
-		// etc. can be stored.  iw::getWriteDirectory() will supply this, or a
-		// sub-directory of this.
+		// This is the writable directory where caches, file uploads, images, etc. can be stored.
+		// iw::getWriteDirectory() will supply this, or a sub-directory of this.
 		//
 
 		'write_directory' => 'assets',
@@ -73,7 +72,6 @@
 		//
 
 		'date_formats' => [
-
 			'console_date'      => 'M jS, Y',
 			'console_time'      => 'g:ia',
 			'console_timestamp' => 'M jS, Y @ g:ia'
