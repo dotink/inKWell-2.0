@@ -45,7 +45,11 @@
 	// Bootstrap inKWell.
 	//
 
-	$app = require implode(DIRECTORY_SEPARATOR, ['.', 'includes', 'init.php']);
+	$app = require implode(DIRECTORY_SEPARATOR, [
+		APPLICATION_ROOT,
+		'includes',
+		'init.php'
+	]);
 
 	//
 	// Set some basics regardless of configuration
@@ -81,6 +85,11 @@
 	$___php .= implode(' ', $___shell_args);
 
 	if (isset($argv[1]) && trim($argv[1])) {
+
+		//
+		// If the first argument looks like a file, just include it
+		//
+
 		if (is_file($argv[1]) && is_readable($argv[1])) {
 			try {
 				include $argv[1];
@@ -89,27 +98,49 @@
 				echo 'Exception: ' . $e->getMessage();
 				exit(1);
 			}
+
+		//
+		// Otherwise, it is assumed to be a request URI with an optional request method
+		// preceding it and separate by '::'
+		//
+
 		} else {
 			$___request = explode('::', $argv[1], 2);
 
-			$_SERVER['REQUEST_URI'] = $___request[0];
+			//
+			// First argument is request method and URI
+			//
 
 			if (count($___request) == 2) {
 				$_SERVER['REQUEST_METHOD'] = strtoupper($___request[0]);
 				$_SERVER['REQUEST_URI']    = $___request[1];
+
+			} else {
+				$_SERVER['REQUEST_URI'] = $___request[0];
 			}
+
+
+			//
+			// Second argument is Accept header
+			//
 
 			if (isset($argv[2])) {
 				$_SERVER['HTTP_ACCEPT'] = $argv[2];
+
 			} else {
 				$_SERVER['HTTP_ACCEPT'] = '*/*';
 			}
 
+			//
+			// Third argument is a JSON string containing parameter/value information
+			// for the request in JSON format.
+
 			if (isset($argv[3])) {
 				if ($_SERVER['REQUEST_METHOD'] == 'GET') {
-					$_GET  = fJSON::decode($argv[3], TRUE);
+					$_GET  = (new Flourish\JSON($argv[3]))->asArray();
+
 				} else {
-					$_POST = fJSON::decode($argv[3], TRUE);
+					$_POST = (new Flourish\JSON($argv[3]))->asArray();
 				}
 			}
 
@@ -330,6 +361,7 @@
 
 	} while(($___code = ___readline($___stdin)));
 
+
 	/**
 	 * A simple readline wrapper that allows us to get the user input via
 	 * various methods.
@@ -341,6 +373,7 @@
 	{
 		return fgets($handler);
 	}
+
 
 	/**
 	 * Register as a shutdown function to ensure that any fatal errors or
@@ -368,6 +401,7 @@
 			)));
 		}
 	}
+
 
 	/**
 	 * Checks syntax of a file and outputs where the errors are.
@@ -404,6 +438,7 @@
 		return TRUE;
 	}
 
+
 	/**
 	 * Check validity of chunks of PHP source code based on advanced alien
 	 * token logic stolen from the mothership by uploading a virus to their
@@ -432,6 +467,7 @@
 
 		return TRUE;
 	}
+
 
 	/**
 	 * Runs an SQL query on a provided database.  The function will dump
@@ -466,6 +502,7 @@
 		}
 	}
 
+
 	/**
 	 * Gracefully attempts to get and return a selected database
 	 *
@@ -481,6 +518,7 @@
 			return NULL;
 		}
 	}
+
 
 	/**
 	 * Clear the screen
