@@ -24,6 +24,7 @@
 
 		const DEFAULT_CONFIG_DIRECTORY = 'config';
 		const DEFAULT_WRITE_DIRECTORY  = 'assets';
+		const DEFAULT_CACHE_DIRECTORY  = 'cache';
 		const DEFAULT_EXECUTION_MODE   = 'development';
 
 		const CONFIG_INTERFACE         = 'Dotink\Interfaces\Config';
@@ -761,11 +762,7 @@
 			$router   = $this->create('router',   [self::ROUTER_INTERFACE]);
 			$response = $this->create('response', [self::RESPONSE_INTERFACE]);
 
-			$response_configs = $this['config']->getAllByType('array', '@response');
-			$redirect_configs = $this['config']->getAllByType('array', '@redirects');
-			$route_configs    = $this['config']->getAllByType('array', '@routes');
-
-			foreach ($redirect_configs as $config) {
+			foreach ($this['config']->getAllByType('array', '@redirects') as $config) {
 				foreach ($config as $type => $redirects) {
 					foreach ($redirects as $route => $translation) {
 						$router->redirect($route, $translation, $type);
@@ -773,11 +770,7 @@
 				}
 			}
 
-			foreach ($route_configs as $config) {
-				$base_url = isset($config['base_url'])
-					? $config['base_url']
-					: NULL;
-
+			foreach ($this['config']->getAllByType('array', '@routes') as $config) {
 				foreach ($config as $route => $action) {
 					$router->link($base_url . $route, $action);
 				}
