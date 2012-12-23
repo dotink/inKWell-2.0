@@ -18,10 +18,11 @@
 	// Register our dependencies
 	//
 
-	$app->register('config',   'Dotink\Inkwell\Config');
-	$app->register('request',  'Dotink\Inkwell\Request');
-	$app->register('response', 'Dotink\Inkwell\Response');
-	$app->register('router',   'Dotink\Inkwell\Router');
+	$app->register('config',     'Dotink\Inkwell\Config');
+	$app->register('request',    'Dotink\Inkwell\Request');
+	$app->register('response',   'Dotink\Inkwell\Response');
+	$app->register('router',     'Dotink\Inkwell\Router');
+	$app->register('scaffolder', 'Dotink\Inkwell\Scaffolder');
 
 	//
 	// Include configuration logic and return the app
