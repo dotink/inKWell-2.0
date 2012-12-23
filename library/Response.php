@@ -31,45 +31,6 @@
 
 
 		/**
-		 * A list of available responses
-		 *
-		 * @static
-		 * @access private
-		 * @var array
-		 */
-		static private $states = [
-			HTTP\OK => [
-				'code' => 200,
-				'body' => NULL
-			],
-			HTTP\NO_CONTENT => [
-				'code' => 204,
-				'body' => NULL
-			],
-			HTTP\NOT_FOUND => [
-				'code' => 404,
-				'body' => 'The requested resource could not be found'
-			],
-			HTTP\NOT_ALLOWED => [
-				'code' => 405,
-				'body' => 'The requested resource does not support this method'
-			],
-			HTTP\NOT_ACCEPTABLE => [
-				'code' => 406,
-				'body' => 'The requested resource is not available in the accepted format'
-			],
-			HTTP\SERVER_ERROR => [
-				'code' => 500,
-				'body' => 'The requested resource is not available due to an internal error'
-			],
-			HTTP\UNAVAILABLE => [
-				'code' => 503,
-				'body' => 'The requested resource is temporarily unavailable'
-			]
-		];
-
-
-		/**
 		 * A list of available renderers
 		 *
 		 * @static
@@ -87,6 +48,32 @@
 		 * @var array
 		 */
 		static private $renderMethods = array();
+
+
+		/**
+		 * A list of available responses
+		 *
+		 * @static
+		 * @access private
+		 * @var array
+		 */
+		static private $states = array();
+
+
+		/**
+		 * A list of mime types which indicate text formats
+		 *
+		 * @static
+		 * @access private
+		 * @var array
+		 */
+		static private $textTypes = [
+			'text/html',
+			'application/json',
+			'application/xhtml+xml',
+			'application/xml',
+			'text/plain',
+		];
 
 
 		/**
@@ -156,9 +143,11 @@
 				? $app->getWriteDirectory($config['cache_directory'])
 				: $app->getWriteDirectory(self::DEFAULT_CACHE_DIRECTORY);
 
-			if (isset($config['responses'])) {
-				self::$responses = array_merge(self::$responses, $config['responses']);
+			if (isset($config['states'])) {
+				self::$states = array_merge(self::$states, $config['states']);
 			}
+
+			$response_configs = $app['config']->getAllByType('array', '@renderers');
 
 			return TRUE;
 		}
@@ -310,7 +299,7 @@
 		 * @param array $headers
 		 * @param string $view
 		 */
-		public function __invoke($status = NULL, $type = NULL, $headers = array(), $view = NULL)
+		public function __invoke($status, $type = NULL, $headers = array(), $view = NULL)
 		{
 			$this->status = !$status
 				? self::DEFAULT_RESPONSE
@@ -364,11 +353,13 @@
 				$response = new self();
 
 				if ($content === NULL) {
-					$response('not_found');
+					$response(HTTP\NOT_FOUND);
+
 				} elseif (empty($content)) {
-					$response('no_content');
+					$response(HTTP\NO_CONTENT);
+
 				} else {
-					$response('ok', NULL, array(), $content);
+					$response(HTTP\OK, NULL, array(), $content);
 				}
 
 			} else {
@@ -461,20 +452,14 @@
 			// however, is exactly the same.
 			//
 
-			header(!Flourish\Core::checkSAPI('cgi-fcgi')
-				? sprintf('%s %d %s', $_SERVER['SERVER_PROTOCOL'], $this->code, $this->status)
-				: sprintf('Status: %d %s', $this->code, $this->status)
-			);
-
-
-			$headers    = array();
-			$text_types = [
-				'text/html', 'application/json', 'application/xhtml+xml', 'application/xml',
-				'text/plain',
+			$headers = [
+				!Flourish\Core::checkSAPI('cgi-fcgi')
+					? sprintf('%s %d %s', $_SERVER['SERVER_PROTOCOL'], $this->code, $this->status)
+					: sprintf('Status: %d %s', $this->code, $this->status)
 			];
 
 			if ($this->code != 204) {
-				if (in_array($this->type, $text_types)) {
+				if (in_array($this->type, self::$textTypes)) {
 					$headers[] = sprintf('Content-Type: %s; charset=utf-8', $this->type);
 				} else {
 					$headers[] = sprintf('Content-Type: %s', $this->type);
@@ -482,24 +467,20 @@
 			}
 
 			foreach ($this->headers as $header => $value) {
-				$headers[] = $header . ': ' . $value;
+				 $headers[] = $header . ': ' . $value;
 			}
 
-
-			if ($headers_only) {
+			if ($headers_only && Flourish\Core::checkSAPI('cli')) {
 				foreach ($headers as $header) {
-					if (Flourish\Core::checkSAPI('cli')) {
-						print($header . "\n");
-					} else {
-						header($header);
-					}
+					print($header . LB);
 				}
-
 			} else {
 				foreach ($headers as $header) {
 					header($header);
 				}
+			}
 
+			if (!$headers_only) {
 				print($this->view);
 			}
 

@@ -1,6 +1,6 @@
 <?php namespace Dotink\Inkwell
 {
-	return Config::create(['Core'], [
+	return Config::create(['Library'], [
 
 		//
 		// Renderers are custom callback logic which will have the response passed to them
@@ -51,7 +51,7 @@
 
 			HTTP\BAD_REQUEST => [
 				'code' => 400,
-				'body' => 'The requested could not be understood'
+				'body' => 'The request could not be understood'
 			],
 
 			HTTP\NOT_AUTHORIZED => [
