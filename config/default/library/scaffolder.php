@@ -3,26 +3,6 @@
 	return Config::create(['Library'], [
 
 		//
-		// The class which we configure
-		//
-
-		'class' => __NAMESPACE__ . '\Scaffolder',
-
-		//
-		// Preload our scaffolder
-		//
-
-		'preload' => TRUE,
-
-		//
-		// If the scaffolder is disabled, this will only prevent on the fly
-		// scaffolding from taking place... you will still be able to scaffold
-		// by manually calling $app['scaffolder']->build()
-		//
-
-		'disabled' => FALSE,
-
-		//
 		// Where are we looking for our scaffolding templates?
 		//
 

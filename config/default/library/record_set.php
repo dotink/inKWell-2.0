@@ -3,13 +3,8 @@
 	return Config::create(['Library', '@autoloading'],  [
 
 		//
-		// The class which we configure
-		//
-
-		'class' => __NAMESPACE__ . '\RecordSet',
-
-		//
-		// Whether or not we should attempt to auto scaffold record sets using this class.
+		// Whether or not we should attempt to auto scaffold record sets using this class when
+		// in development mode.
 		//
 
 		'auto_scaffold' => TRUE,

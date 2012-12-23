@@ -3,13 +3,8 @@
 	return Config::create(['Library'], [
 
 		//
-		// The class which we configure
-		//
-
-		'class' => __NAMESPACE__ . '\Controller',
-
-		//
-		// Whether or not we should attempt to auto scaffold controllers using this class.
+		// Whether or not we should attempt to auto scaffold controllers using this class when
+		// in development mode.
 		//
 
 		'auto_scaffold' => FALSE,

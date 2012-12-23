@@ -3,13 +3,8 @@
 	return Config::create(['Library'], [
 
 		//
-		// The class which we configure
-		//
-
-		'class' => __NAMESPACE__ . '\ActiveRecord',
-
-		//
-		// Whether or not we should attempt to auto scaffold records using this class.
+		// Whether or not we should attempt to auto scaffold records using this class when in
+		// development mode.
 		//
 
 		'auto_scaffold' => TRUE,
