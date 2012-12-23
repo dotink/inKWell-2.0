@@ -428,7 +428,7 @@
 				} else{
 					$this->data = array_replace_recursive($_GET, $_POST);
 
-					if ($this->checkMethod(PUT) || $this->checkMethod(DELETE)) {
+					if ($this->checkMethod(HTTP\PUT) || $this->checkMethod(HTTP\DELETE)) {
 						parse_str(file_get_contents('php://input'), $input_data);
 
 						$this->data = array_replace_recursive($this->data, $input_data);
