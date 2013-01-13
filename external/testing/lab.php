@@ -13,6 +13,7 @@
 
 	const REGEX_ABSOLUTE_PATH = '#^(/|\\\\|[a-z]:(\\\\|/)|\\\\|//)#i';
 
+
 	/**
 	 * Get a message printed in a particular color
 	 *
@@ -132,7 +133,7 @@
 
 			foreach ($fixtures as $fixture) {
 				passthru(
-					PHP_BINARY . ' ' . __FILE__ . ' ' . escapeshellarg($fixture),
+					PHP_BINARY . ' -d display_errors=Off ' . __FILE__ . ' ' . escapeshellarg($fixture),
 					$status
 				);
 
@@ -147,6 +148,27 @@
 		$config   = get_config();
 		$fixture  = require($argv[1]);
 		$headline = sprintf('Running %s', pathinfo($argv[1], PATHINFO_FILENAME));
+		$errors   = array();
+
+		set_error_handler(function($number, $string, $file, $line, $context) use (&$errors) {
+			$type = 'Unknown(' . $number . ')';
+
+			switch ($number) {
+				case E_ERROR:   $type = 'E_ERROR'; break;
+				case E_WARNING: $type = 'E_WARNING'; break;
+				case E_NOTICE:  $type = 'E_NOTICE'; break;
+				case E_STRICT:  $type = 'E_STRICT'; break;
+			}
+
+			$errors[] = sprintf(
+				'[%s](%s:%d): %s' . LB,
+				$type, $file, $line, $string
+			);
+		});
+
+		register_shutdown_function(function() {
+
+		});
 
 		echo _($headline, 'blue') . LB;
 
@@ -178,6 +200,12 @@
 						echo '[' . _('FAIL', 'red')   . ']' . LB;
 						echo LB;
 						echo $e->getMessage() . LB;
+						echo LB;
+						echo 'PHP Errors (' . count($errors) . ')' . LB;
+						echo LB;
+						foreach ($errors as $error) {
+							echo $error . LB;
+						}
 						echo LB;
 						exit(-1);
 					}
