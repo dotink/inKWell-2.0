@@ -12,6 +12,7 @@
 	 * @package Dotink\Inkwell
 	 */
 
+	use App;
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
 
@@ -19,6 +20,8 @@
 	{
 		const DEFAULT_CONFIG          = 'default';
 		const CONFIG_BY_TYPES_ELEMENT = '__TYPES__';
+
+		const ELEMENT_SEPARATOR       = '.';
 
 
 		/**
@@ -94,7 +97,7 @@
 		static private function generateElementId($path)
 		{
 			$path = str_replace(DS, '/', $path);
-			$path = new Flourish\Text($path);
+			$path = new App\Text($path);
 
 			return md5($path->underscorize());
 		}
@@ -176,7 +179,6 @@
 		 * @param string $typehint The typehint for the config element
 		 * @param string $class The class to get the configuration for
 		 * @param string $element The configuration element to get
-		 * @param ...
 		 * @return mixed The configuration element or default empty value if none is found
 		 */
 		public function get($typehint = 'array', $class = NULL, $element = NULL)
@@ -189,14 +191,17 @@
 				if ($element_id && isset($this->data[$element_id])) {
 					$config = $this->data[$element_id];
 
-					foreach (array_slice(func_get_args(), 2) as $sub_element) {
-						if (isset($config[$sub_element])) {
-							$config = $config[$sub_element];
-						} else {
-							$config = NULL;
+					if ($element) {
+						foreach (explode(self::ELEMENT_SEPARATOR, $element) as $sub_element) {
+							if (isset($config[$sub_element])) {
+								$config = $config[$sub_element];
+							} else {
+								$config = NULL;
+							}
 						}
 					}
 				}
+
 			} else {
 				$config = $this->data;
 			}
@@ -212,34 +217,31 @@
 		 * @param string $typehint The typehint for the configuration elements
 		 * @param string $type The config type to get configuration elements for
 		 * @param string $element The configuration element to get for each config
-		 * @param ...
 		 * @return array The config data for each config matching the type, keys are element ids
 		 */
-		public function getAllByType($typehint = 'array', $type = NULL, $element = NULL)
+		public function getByType($typehint = 'array', $type = NULL, $element = NULL)
 		{
-			$type         = strtolower($type);
-			$data         = array();
-			$sub_elements = $element !== NULL
-				? array_slice(func_get_args(), 2)
-				: array();
-
 			if ($type !== NULL) {
+				$data = array();
+				$type = strtolower($type);
 
 				if ($type[0] == '@') {
-					$element_id        = $this->elementize($type);
-					$data[$element_id] = call_user_func_array([$this, 'get'], func_get_args());
-					$sub_elements      = array_slice(func_get_args(), 1);
+					$element_id = $this->elementize($type);
+					$element    = $type . self::ELEMENT_SEPARATOR . $element;
 				}
 
 				if (isset($this->data[self::CONFIG_BY_TYPES_ELEMENT][$type])) {
 					$configs_by_type = $this->data[self::CONFIG_BY_TYPES_ELEMENT][$type];
+					$sub_elements    = explode(self::ELEMENT_SEPARATOR, $element);
 
 					foreach ($configs_by_type as $element_id => $config) {
-						foreach ($sub_elements as $sub_element) {
-							if (isset($config[$sub_element])) {
-								$config = $config[$sub_element];
-							} else {
-								$config = NULL;
+						if ($sub_elements[0]) {
+							foreach ($sub_elements as $sub_element) {
+								if (isset($config[$sub_element])) {
+									$config = $config[$sub_element];
+								} else {
+									$config = NULL;
+								}
 							}
 						}
 

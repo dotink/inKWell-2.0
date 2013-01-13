@@ -13,12 +13,15 @@
 	 * @package Dotink\Inkwell
 	 */
 
+	use App;
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
 	use ArrayAccess;
 
 	class IW implements ArrayAccess
 	{
+		const MAGIC_NAMESPACE          = 'App';
+
 		const INITIALIZATION_METHOD    = '__init';
 		const MATCH_CLASS_METHOD       = '__match';
 
@@ -30,6 +33,15 @@
 		const CONFIG_INTERFACE         = 'Dotink\Interfaces\Config';
 		const RESPONSE_INTERFACE       = 'Dotink\Interfaces\Response';
 		const ROUTER_INTERFACE         = 'Dotink\Interfaces\Router';
+
+
+		/**
+		 * A list of just-in-time aliases for the autoloader
+		 *
+		 * @access private
+		 * @var array
+		 */
+		private $aliases = array();
 
 
 		/**
@@ -106,7 +118,7 @@
 			$parts = explode('\\', $class);
 			$class = array_pop($parts);
 			$path  = implode(DS, $parts);
-			$path  = Flourish\Text::create($path)->underscorize();
+			$path  = App\Text::create($path)->underscorize();
 
 			return $path . DS . $class . '.php';
 		}
@@ -208,6 +220,30 @@
 			}
 
 			return $this->roots[$key] = $root_directory;
+		}
+
+
+		/**
+		 * Alias a class in the magic namespace to another fully qualified class
+		 *
+		 * Unlike using class_alias() in the system, this method will place the actual aliasing
+		 * within the autoloading logic which allows for aliases themselves to be lazy.
+		 *
+		 * @access public
+		 * @param string|array $alias The class alias to use or an array of aliases to classes
+		 * @param string $class The class to alias to
+		 * @return void
+		 */
+		public function alias($alias, $class = NULL)
+		{
+			if (func_num_args() == 1 && is_array($alias)) {
+				foreach ($alias as $alias => $class) {
+					$this->aliases[self::MAGIC_NAMESPACE . '\\' . $alias] = $class;
+				}
+			} else {
+				$this->aliases[self::MAGIC_NAMESPACE .  '\\' . $alias] = $class;
+			}
+
 		}
 
 
@@ -318,50 +354,31 @@
 			// Set up our libraries.
 			//
 
-			$library_configs = $config->getAllByType('array', 'Library');
+			foreach ($config->getByType('array', 'Library') as $element_id => $library_config) {
+				$class    = $config->classize($element_id);
+				$root     = isset($library_config['root_directory']);
+				$autoload = !empty($library_config['auto_load']);
 
-			foreach ($library_configs as $element_id => $library_config) {
-				if ($class = $config->classize($element_id)) {
+				if ($root) {
+					$this->addRoot($element_id, $library_config['root_directory']);
 
-					if (!isset($library_config['root_directory'])) {
-						throw new Flourish\ProgrammerException(
-							'Library config must contain a "root_directory" definition'
-						);
+					if ($autoload) {
+						if (!$class) {
+							throw new Flourish\ProgrammerException(
+								'Cannot autoload library from %s, class is not defined',
+								$root
+							);
+
+						} elseif (isset($this->loaders[$class])) {
+							throw new Flourish\ProgrammerException(
+								'Cannot autoload library from %s, class %s already configured',
+								$class
+							);
+
+						} else {
+							$this->loaders[$class] = $this->getRoot($element_id);
+						}
 					}
-
-					if (!isset($library_config['class'])) {
-						throw new Flourish\ProgrammerException(
-							'Library config must contain a "class" definition'
-						);
-					}
-
-					$class = $library_config['class'];
-					$root  = $library_config['root_directory'];
-
-					if (!isset($library_config['key'])) {
-						$class = end(explode('\\', $class));
-						$key   = (string) Flourish\Text::create($class)->underscorize();
-					} else {
-						$key   = $library_config['key'];
-					}
-
-					if (isset($this->roots[$key])) {
-						throw new Flourish\ProgrammerException(
-							'Library with key "%s" already exists',
-							$key
-						);
-					}
-
-					$this->addRoot($key, $root);
-
-					if (isset($this->loaders[$class])) {
-						throw new Flourish\ProgrammerException(
-							'Library with base class "%s" already exists',
-							$class
-						);
-					}
-
-					$this->loaders[$class] = $root;
 				}
 			}
 
@@ -369,7 +386,7 @@
 			// Set up our autoloaders
 			//
 
-			foreach ($config->getAllByType('array', '@autoloading') as $autoloading_config) {
+			foreach ($config->getByType('array', '@autoloading') as $autoloading_config) {
 
 				settype($autoloading_config['standards'], 'array');
 				settype($autoloading_config['map'], 'array');
@@ -465,13 +482,17 @@
 		 * Gets a configured root directory from the configured root directories
 		 *
 		 * @access public
-		 * @param string $key The key to lookup
+		 * @param string $key The key or class name to lookup
 		 * @param string $default A default root, relative to the application root
 		 * @return string A reference to the root directory for "live roots"
 		 */
 		public function getRoot($key = NULL, $default = NULL)
 		{
-			$key = !$key ? NULL : strtolower($key);
+			if ($key) {
+				$key = class_exists($key, FALSE)
+					? $this['config']->elementize($key)
+					: strtolower($key);
+			}
 
 			if (!isset($this->roots[$key])) {
 				if (!$default) {
@@ -479,7 +500,7 @@
 				} else {
 					$default   = str_replace('/', DS, rtrim($default, '/\\' . DS));
 					$directory = !preg_match(REGEX\ABSOLUTE_PATH, $default)
-						? $this->roots[NULL] . DS . $directory
+						? $this->roots[NULL] . DS . $default
 						: $default;
 				}
 			} else {
@@ -594,6 +615,12 @@
 		 */
 		public function loadClass($class, Array $loaders = array())
 		{
+			if (isset($this->aliases[$class])) {
+				if ($this->loadClass($this->aliases[$class], $loaders)) {
+					class_alias($this->aliases[$class], $class);
+				}
+			}
+
 			if (!count($loaders)) {
 				$loaders = $this->loaders;
 			}
@@ -762,7 +789,7 @@
 			$router   = $this->create('router',   [self::ROUTER_INTERFACE]);
 			$response = $this->create('response', [self::RESPONSE_INTERFACE]);
 
-			foreach ($this['config']->getAllByType('array', '@redirects') as $config) {
+			foreach ($this['config']->getByType('array', '@redirects') as $config) {
 				foreach ($config as $type => $redirects) {
 					foreach ($redirects as $route => $translation) {
 						$router->redirect($route, $translation, $type);
@@ -770,7 +797,7 @@
 				}
 			}
 
-			foreach ($this['config']->getAllByType('array', '@routes') as $config) {
+			foreach ($this['config']->getByType('array', '@routes') as $config) {
 				foreach ($config as $route => $action) {
 					$router->link($base_url . $route, $action);
 				}

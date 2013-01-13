@@ -24,7 +24,7 @@
 			// Path: vendor/package_name/Old_Style_Class.php
 			//
 
-			'IW'   => __NAMESPACE__ . '\IW::transformClassToIW',
+			'IW' => __NAMESPACE__ . '\IW::transformClassToIW',
 
 			//
 			// PSR-0 is well enough documented here:

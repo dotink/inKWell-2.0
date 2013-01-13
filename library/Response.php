@@ -147,7 +147,7 @@
 				self::$states = array_merge(self::$states, $config['states']);
 			}
 
-			$response_configs = $app['config']->getAllByType('array', '@renderers');
+			$response_configs = $app['config']->getByType('array', '@renderers');
 
 			return TRUE;
 		}

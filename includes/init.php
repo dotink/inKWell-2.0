@@ -24,6 +24,17 @@
 	$app->register('router',     'Dotink\Inkwell\Router');
 	$app->register('scaffolder', 'Dotink\Inkwell\Scaffolder');
 
+
+	//
+	// Just-In-Time class aliases.  These classes will exist in the magic namespace 'App'.  So for
+	// example if you register an alias of 'Text' => 'Vendor\Project\Text' it will actually need
+	// to be used as 'App\Text'.
+	//
+
+	$app->alias([
+		'Text' => 'Dotink\Flourish\Text'
+	]);
+
 	//
 	// Include configuration logic and return the app
 	//
