@@ -243,7 +243,6 @@
 			} else {
 				$this->aliases[self::MAGIC_NAMESPACE .  '\\' . $alias] = $class;
 			}
-
 		}
 
 
