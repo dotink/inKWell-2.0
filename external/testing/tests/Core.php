@@ -87,6 +87,7 @@
 			//
 
 			'addRoot()' => function($config) {
+
 				$app = new Inkwell\IW($config['app_root']);
 
 				assert('Dotink\Inkwell\IW::addRoot')
@@ -112,6 +113,7 @@
 			//
 
 			'getRoot()' => function($config) {
+
 				$app = new Inkwell\IW($config['app_root']);
 
 				$app->addRoot('testing', implode(DS, ['external', 'testing']));
