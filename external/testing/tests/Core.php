@@ -69,7 +69,7 @@
 
 			'addLoadingStandard()' => function($config) {
 
-				$app = new Inkwell\IW($config['app_root']);
+				$app = new Inkwell\IW($config['root']);
 
 				assert('Dotink\Inkwell\IW::addLoadingStandard')
 					-> using($app)
@@ -88,13 +88,13 @@
 
 			'addRoot()' => function($config) {
 
-				$app = new Inkwell\IW($config['app_root']);
+				$app = new Inkwell\IW($config['root']);
 
 				assert('Dotink\Inkwell\IW::addRoot')
 					-> using($app)
 
 					-> with('testing', 'external/testing')
-					-> equals($config['app_root'] . DS . implode(DS, ['external', 'testing']))
+					-> equals($config['root'] . DS . implode(DS, ['external', 'testing']))
 
 					-> with('testing', '/tmp')
 					-> equals('/tmp')
@@ -107,14 +107,14 @@
 			//
 			// Two roots are added, one relative, one absolute and then we test to make sure they
 			// both come back as full directories paths, the relative one rooted in the
-			// $config['app_root'] value which is passed to IW during instantiation.  Lastly we
-			// make sure that a value which was not added returns just the $config['app_root']
+			// $config['root'] value which is passed to IW during instantiation.  Lastly we
+			// make sure that a value which was not added returns just the $config['root']
 			// value.
 			//
 
 			'getRoot()' => function($config) {
 
-				$app = new Inkwell\IW($config['app_root']);
+				$app = new Inkwell\IW($config['root']);
 
 				$app->addRoot('testing', implode(DS, ['external', 'testing']));
 				$app->addRoot('tmp', '/tmp');
@@ -123,13 +123,13 @@
 
 					-> using($app)
 					-> with('testing')
-					-> equals($config['app_root'] . DS . implode(DS, ['external', 'testing']))
+					-> equals($config['root'] . DS . implode(DS, ['external', 'testing']))
 
 					-> with('tmp')
 					-> equals('/tmp')
 
 					-> with('value not added')
-					-> equals($config['app_root']);
+					-> equals($config['root']);
 			},
 
 
