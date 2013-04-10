@@ -12,8 +12,5 @@
 			'Dotink\Flourish\Image' => ''
 		],
 
-		''
-
-
 	]);
 }

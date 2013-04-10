@@ -3,6 +3,12 @@
 	return Config::create(['Library'], [
 
 		//
+		// The class which we configure
+		//
+
+		'class' => __NAMESPACE__ . '\Scaffolder',
+
+		//
 		// Where are we looking for our scaffolding templates?
 		//
 

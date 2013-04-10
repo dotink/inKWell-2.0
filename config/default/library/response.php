@@ -3,16 +3,10 @@
 	return Config::create(['Library'], [
 
 		//
-		// Renderers are custom callback logic which will have the response passed to them
-		// prior to outputting the view.  They are based on mime-type and will only be called
-		// if the response content type matches.
-		//
-		// The match, represented by the key of the array, is actually a RegEx delimited by #.
-		//
-		// Each callback is rendered in the order in which it is defined.
+		// The class which we configure
 		//
 
-		'renderers' => [],
+		'class' => __NAMESPACE__ . '\Response',
 
 		//
 		// Response state are short name aliases for various response codes and/or default content.

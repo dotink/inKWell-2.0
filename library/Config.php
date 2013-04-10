@@ -1,5 +1,9 @@
 <?php namespace Dotink\Inkwell
 {
+	use App;
+	use Dotink\Flourish;
+	use Dotink\Interfaces;
+
 	/**
 	 * Config class responsible for building and representing configuration information as well
 	 * as providing accessor methods to query the configuration.
@@ -11,11 +15,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	use App;
-	use Dotink\Flourish;
-	use Dotink\Interfaces;
-
 	class Config implements Interfaces\Config
 	{
 		const DEFAULT_CONFIG          = 'default';
@@ -226,8 +225,20 @@
 				$type = strtolower($type);
 
 				if ($type[0] == '@') {
-					$element_id = $this->elementize($type);
-					$element    = $type . self::ELEMENT_SEPARATOR . $element;
+					$element_id        = $this->elementize($type);
+					$data[$element_id] = $this->get('array', $type, $element);
+
+					//
+					// The above line will get the core config for the pseudo-class, but we need
+					// to modify the $element for all future configs by prepending the $type
+					// to the original element if it exists.
+					//
+
+					if ($element) {
+						$element = $type . self::ELEMENT_SEPARATOR . $element;
+					} else {
+						$element = $type;
+					}
 				}
 
 				if (isset($this->data[self::CONFIG_BY_TYPES_ELEMENT][$type])) {

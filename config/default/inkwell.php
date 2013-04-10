@@ -24,7 +24,7 @@
 		// iw::getWriteDirectory() will supply this, or a sub-directory of this.
 		//
 
-		'write_directory' => 'assets',
+		'write_directory' => 'writable',
 
 		//
 		// Here you can configure whether or not to display errors, or e-mail

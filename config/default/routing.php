@@ -53,9 +53,11 @@
 	// callback takes on the form of a static method.
 	//
 
-	return Config::create('Core', [
-		'/'                              => 'phpinfo',
-		'/hello/[!:name]'                => 'Mattsah\Test\TestController::hello',
-		'/[$:class]/[$:method]/[!:wash]' => '[uc:class]::[lc:method]',
+	return Config::create(['Core'], [
+		'base_url' => '/',
+
+		'actions' => [
+			'/system_information' => 'phpinfo'
+		]
 	]);
 }

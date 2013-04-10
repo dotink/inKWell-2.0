@@ -6,7 +6,7 @@
 	return [
 
 		'setup' => function($data) {
-			needs($data['app_root'] . DS . 'includes/core.php');
+			needs($data['root'] . DS . 'includes/core.php');
 
 			Mime::define('App\Text');
 		},

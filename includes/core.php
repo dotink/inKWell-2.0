@@ -1,5 +1,10 @@
 <?php namespace Dotink\Inkwell
 {
+	use App;
+	use Dotink\Flourish;
+	use Dotink\Interfaces;
+	use ArrayAccess;
+
 	/**
 	 * IW is the core inKWell class.
 	 *
@@ -12,12 +17,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	use App;
-	use Dotink\Flourish;
-	use Dotink\Interfaces;
-	use ArrayAccess;
-
 	class IW implements ArrayAccess
 	{
 		const MAGIC_NAMESPACE          = 'App';
@@ -197,6 +196,22 @@
 
 
 		/**
+		 *
+		 */
+		public function addLoadingMap($match, $target)
+		{
+			if (isset($this->loaders[$match])) {
+				throw new Flourish\ProgrammerException(
+					'Cannot add loading map for conflicting match key "%s"',
+					$match
+				);
+			}
+
+			$this->loaders[$match] = $target;
+		}
+
+
+		/**
 		 * Adds a Root Directory.  This will overload any root directory with the same key.
 		 *
 		 * @access public
@@ -354,30 +369,27 @@
 			//
 
 			foreach ($config->getByType('array', 'Library') as $element_id => $library_config) {
-				$class    = $config->classize($element_id);
-				$root     = isset($library_config['root_directory']);
-				$autoload = !empty($library_config['auto_load']);
+				$class = $config->classize($element_id);
 
-				if ($root) {
-					$this->addRoot($element_id, $library_config['root_directory']);
+				if (!$class) {
+					throw new Flourish\ProgrammerException(
+						'Library %s must define a `class` configuration element',
+						$element_id
+					);
+				}
 
-					if ($autoload) {
-						if (!$class) {
-							throw new Flourish\ProgrammerException(
-								'Cannot autoload library from %s, class is not defined',
-								$root
-							);
+				if (!empty($library_config['autoload'])) {
+					$has_root = isset($library_config['root_directory']);
 
-						} elseif (isset($this->loaders[$class])) {
-							throw new Flourish\ProgrammerException(
-								'Cannot autoload library from %s, class %s already configured',
-								$class
-							);
-
-						} else {
-							$this->loaders[$class] = $this->getRoot($element_id);
-						}
+					if (!$has_root) {
+						throw new Flourish\ProgrammerException(
+							'Autoloading for class %s enabled, but no `root_directory` defined',
+							$class
+						);
 					}
+
+					$this->addRoot($class, $library_config['root_directory']);
+					$this->addLoadingMap($class, 'PSR0: ' . $this->getRoot($class));
 				}
 			}
 
@@ -676,7 +688,7 @@
 
 								if (is_array($interfaces = class_implements($class, FALSE))) {
 									return (in_array('Dotink\Interfaces\Inkwell', $interfaces))
-										? self::initializeClass($class)
+										? $this->initializeClass($class)
 										: TRUE;
 								}
 							}
@@ -796,9 +808,15 @@
 				}
 			}
 
-			foreach ($this['config']->getByType('array', '@routes') as $config) {
-				foreach ($config as $route => $action) {
-					$router->link($base_url . $route, $action);
+			foreach ($this['config']->getByType('array', '@routing') as $config) {
+				$base_url = isset($config['base_url']) && $config['base_url']
+					? rtrim($config['base_url'], '/')
+					: '';
+
+				if (isset($config['actions']) && is_array($config['actions'])) {
+					foreach ($config['actions'] as $route => $action) {
+						$router->link($base_url . '/' . ltrim($route, '/'), $action);
+					}
 				}
 			}
 

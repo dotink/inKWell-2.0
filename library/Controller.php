@@ -1,5 +1,10 @@
 <?php namespace Dotink\Inkwell
 {
+	use App;
+	use Dotink\Flourish;
+	use Dotink\Interfaces;
+	use Dotink\Traits;
+
 	/**
 	 *
 	 *
@@ -10,14 +15,23 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	use Dotink\Flourish;
-	use Dotink\Interfaces;
-	use Dotink\Traits;
-
 	class Controller implements Interfaces\Inkwell, Interfaces\Controller
 	{
 		use Traits\Container;
+
+		/**
+		 * Determines whether or not a class name is a controller
+		 *
+		 * @static
+		 * @access public
+		 * @param string $class The class name to match
+		 * @return boolean TRUE if the class name matches, FALSE otherwise
+		 */
+		static public function __match($class)
+		{
+			return preg_match('/(.*)Controller$/', $class);
+		}
+
 
 		/**
 		 * Restricts the acceptable mime types for a given action.

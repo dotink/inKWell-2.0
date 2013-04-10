@@ -1,5 +1,9 @@
 <?php namespace Dotink\Inkwell
 {
+	use App;
+	use Dotink\Flourish;
+	use Dotink\Interfaces;
+
 	/**
 	 * Response Class
 	 *
@@ -10,13 +14,9 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	use Dotink\Flourish;
-	use Dotink\Interfaces;
-
 	class Response implements Interfaces\Inkwell, Interfaces\Response
 	{
-		const DEFAULT_CACHE_DIRECTORY = 'cache/.responses';
+		const DEFAULT_CACHE_DIRECTORY = 'cache/responses';
 		const DEFAULT_RESPONSE        = HTTP\NOT_FOUND;
 
 
@@ -146,8 +146,6 @@
 			if (isset($config['states'])) {
 				self::$states = array_merge(self::$states, $config['states']);
 			}
-
-			$response_configs = $app['config']->getByType('array', '@renderers');
 
 			return TRUE;
 		}

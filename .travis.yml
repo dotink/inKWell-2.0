@@ -3,5 +3,4 @@ php:
   - 5.4
 before_install:
   - git submodule update --init --recursive
-script: php ./external/testing/lab/lab.php
-
+script: php ./external/testing/lab/lab.php ./external/testing

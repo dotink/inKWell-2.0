@@ -1,9 +1,6 @@
 [submodule "library/flourish"]
 	path = library/flourish
 	url = https://github.com/dotink/flourishToo.git
-[submodule "external/testing/library/parody"]
-	path = external/testing/library/parody
-	url = https://github.com/dotink/Parody.git
 [submodule "external/testing/lab"]
 	path = external/testing/lab
-	url = https://github.com/dotink/Lab.git
+	url = https://github.com/dotink/lab.git

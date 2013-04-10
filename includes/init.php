@@ -32,7 +32,8 @@
 	//
 
 	$app->alias([
-		'Text' => 'Dotink\Flourish\Text'
+		'Text' => 'Dotink\Flourish\Text',
+		'Date' => 'Dotink\Flourish\Date',
 	]);
 
 	//

@@ -1,5 +1,9 @@
 <?php namespace Dotink\Inkwell
 {
+	use App;
+	use Dotink\Flourish;
+	use Dotink\Interfaces;
+
 	/**
 	 * Request class responsible for creating / executing requests.
 	 *
@@ -11,10 +15,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	use Dotink\Flourish;
-	use Dotink\Interfaces;
-
 	class Request implements Interfaces\Inkwell, Interfaces\Request
 	{
 		const MAP_REGEX = '#^(?:\(([a-zA-Z]+)\))?\s+([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)$#';

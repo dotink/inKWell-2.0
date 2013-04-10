@@ -1,5 +1,9 @@
 <?php namespace Dotink\Inkwell
 {
+	use App;
+	use Dotink\Flourish;
+	use Dotink\Interfaces;
+
 	/**
 	 * Routes class responsible for mapping request paths to logic.
 	 *
@@ -10,10 +14,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	use Dotink\Flourish;
-	use Dotink\Interfaces;
-
 	class Router implements Interfaces\Inkwell, Interfaces\Router
 	{
 		const CONTROLLER_INTERFACE = 'Dotink\Interfaces\Controller';
@@ -388,7 +388,7 @@
 			if (self::$restless) {
 				$restless_uri = ($request_uri[strlen($request_uri) - 1] == '/')
 					? substr($request_uri, 0, -1)
-					: $request_uri . '/';				
+					: $request_uri . '/';
 			}
 
 			if ($redirect_type = $this->translateRedirect($request_uri, $restless_uri)) {

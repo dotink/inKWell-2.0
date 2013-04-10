@@ -1,5 +1,9 @@
 <?php namespace Dotink\Inkwell
 {
+	use App;
+	use Dotink\Flourish;
+	use Dotink\Interfaces;
+
 	/**
 	 * The inKWell Scaffolder
 	 *
@@ -14,10 +18,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	use Dotink\Flourish;
-	use Dotink\Interfaces;
-
 	class Scaffolder
 	{
 		/**

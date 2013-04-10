@@ -1,5 +1,8 @@
 <?php namespace Dotink\Inkwell
 {
+	use App;
+	use Dotink\Flourish;
+
 	/**
 	 * View Class
 	 *
@@ -10,9 +13,6 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-
-	use Dotink\Flourish;
-
 	class View
 	{
 
