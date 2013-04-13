@@ -1,0 +1,37 @@
+{
+	"name": "dotink/inkwell-2.0",
+	"description": "The inKWell 2.0 framework",
+	"keywords": ["mvc", "framework", "application"],
+	"license": "AGPL 3.0",
+	"minimum-stability": "dev",
+	"authors": [
+		{
+			"name": "Matthew J. Sahagian",
+			"email": "matt@imarc.net",
+			"role": "Lead Architect / Developer"
+		}
+	],
+	"repositories": [
+		{
+			"type": "composer",
+			"url": "http://packages.dotink.org"
+		}
+	],
+	"require": {
+		"php": ">=5.4.0",
+		"imarc/tails": "dev-master",
+		"dotink/flourish": "dev-master"
+	},
+	"scripts": {
+        "post-package-install": [
+            "iMarc\\Tails\\Processor::install"
+        ],
+        "post-package-update": [
+            "iMarc\\Tails\\Processor::update"
+        ]
+	},
+	"extra": {
+		"tails-framework": "inkwell-2.0",
+		"tails-asset-root": "assets"
+	}
+}
