@@ -19,8 +19,8 @@
 	],
 	"require": {
 		"php": ">=5.4.0",
-		"imarc/tails": "dev-master",
 		"dotink/flourish": "dev-master"
+		"imarc/tails": "dev-master",
 	},
 	"scripts": {
         "post-package-install": [
