@@ -1,2 +1,3 @@
 .console.hist
 .console.command
+composer.lock
