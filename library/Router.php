@@ -3,6 +3,7 @@
 	use App;
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
+	use Dotink\Traits;
 
 	/**
 	 * Routes class responsible for mapping request paths to logic.
@@ -16,6 +17,8 @@
 	 */
 	class Router implements Interfaces\Inkwell, Interfaces\Router
 	{
+		use Traits\Emitter;
+
 		const CONTROLLER_INTERFACE = 'Dotink\Interfaces\Controller';
 		const REGEX_TOKEN          = '/\[[^\]]*\]/';
 
@@ -414,6 +417,8 @@
 							$request->set($key, $value);
 						}
 
+						$this->emit('beginAction', $request);
+
 						ob_start();
 
 						if ($action instanceof \Closure) {
@@ -435,6 +440,8 @@
 						} else {
 							$controller_response = $action();
 						}
+
+						$this->emit('endAction', $response);
 
 						$response = ($output = ob_get_clean())
 							? $response(HTTP\OK, NULL, [], $output)
