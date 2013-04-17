@@ -25,15 +25,18 @@
 		"dotink/emitter-trait": "dev-master"
 	},
 	"scripts": {
-        "post-package-install": [
+        "post-install-cmd": [
             "iMarc\\Tails\\Processor::install"
         ],
-        "post-package-update": [
+        "post-update-cmd": [
             "iMarc\\Tails\\Processor::update"
         ]
 	},
 	"extra": {
-		"tails-framework": "inkwell-2.0",
-		"tails-asset-root": "assets"
+		"tails": {
+			"options": {
+				"framework": "inkwell-2.0"
+			}
+		}
 	}
 }
