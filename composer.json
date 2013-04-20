@@ -19,23 +19,15 @@
 	],
 	"require": {
 		"php": ">=5.4.0",
-		"imarc/tails": "dev-master",
 		"dotink/flourish": "dev-master",
 		"dotink/container-trait": "dev-master",
 		"dotink/emitter-trait": "dev-master"
 	},
-	"scripts": {
-        "post-install-cmd": [
-            "iMarc\\Tails\\Processor::install"
-        ],
-        "post-update-cmd": [
-            "iMarc\\Tails\\Processor::update"
-        ]
-	},
 	"extra": {
-		"tails": {
+		"opus": {
 			"options": {
-				"framework": "inkwell-2.0"
+				"framework": "inkwell-2.0",
+				"external-mapping": true
 			}
 		}
 	}
