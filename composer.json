@@ -26,8 +26,7 @@
 	"extra": {
 		"opus": {
 			"options": {
-				"framework": "inkwell-2.0",
-				"external-mapping": true
+				"framework": "inkwell-2.0"
 			}
 		}
 	}
