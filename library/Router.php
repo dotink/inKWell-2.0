@@ -385,8 +385,9 @@
 		 */
 		public function run(Interfaces\Request $request, Interfaces\Response $response)
 		{
-			$restless_uri = NULL;
-			$request_uri  = $request->getPath();
+			$restless_uri  = NULL;
+			$request_uri   = $request->getPath();
+			$unused_params = array();
 
 			if (self::$restless) {
 				$restless_uri = ($request_uri[strlen($request_uri) - 1] == '/')
