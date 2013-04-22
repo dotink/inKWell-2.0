@@ -172,7 +172,7 @@
 		 * @param array $remainder The unused params
 		 * @return string The decompiled route
 		 */
-		static private function decompile($route, $params, &$remainder = array())
+		static private function decompile($route, $params, &$remainder = NULL)
 		{
 			$remainder = $params;
 
@@ -202,14 +202,14 @@
 							break;
 						case 'uc':
 							$value = str_replace('-', '_', $value);
-							$value = Flourish\Text::create($value)->camelize(TRUE);
+							$value = App\Text::create($value)->camelize(TRUE);
 							break;
 						case 'lc':
 							$value = str_replace('-', '_', $value);
-							$value = Flourish\Text::create($value)->camelize();
+							$value = App\Text::create($value)->camelize();
 							break;
 						case 'us':
-							$value = Flourish\Text::create($value)->underscorize();
+							$value = App\Text::create($value)->underscorize();
 							break;
 						default:
 							throw new Flourish\ProgrammerException(
@@ -265,13 +265,19 @@
 		 * @access public
 		 * @param string $route The route to compose
 		 * @param array $components A list of components mapping param name => value
+		 * @param boolean $remainder_as_query Whether or not to include extra components as a query
 		 * @return string The URL with route tokens replaced by respective components
 		 */
-		public function compose($route, $components, &$remainder)
+		public function compose($route, $components, $remainder_as_query = TRUE)
 		{
 			$url = self::decompile($route, $components, $remainder);
 
-			while ($this->translate($url) !== FALSE);
+			while ($this->translateRedirect($url) !== NULL);
+
+			if ($remainder_as_query && count($remainder)) {
+				$url = $url . '?' . http_build_query($remainder, '', '&',  PHP_QUERY_RFC3986);
+			}
+
 			return $url;
 		}
 
@@ -407,14 +413,15 @@
 						array_shift($matches);
 
 						$route  = $link['route'];
+						$action = $link['action'];
 						$params = array_combine($link['params'], $matches);
-						$action = $this->parseAction(
-							is_string($link['action'])
-								? self::decompile($link['action'], $params, $unused_params)
-								: $link['action']
-						);
 
-						foreach ($unused_params as $key => $value) {
+						if (is_string($action)) {
+							$action = self::decompile($action, $params, $unused_params);
+							$params = $unused_params;
+						}
+
+						foreach ($params as $key => $value) {
 							$request->set($key, $value);
 						}
 
@@ -442,11 +449,11 @@
 							$controller_response = $action();
 						}
 
-						$this->emit('endAction', $response);
-
 						$response = ($output = ob_get_clean())
 							? $response(HTTP\OK, NULL, [], $output)
 							: $response->resolve($controller_response);
+
+						$this->emit('endAction', $response);
 
 					} elseif (preg_match('#^' . $pattern . '$#', $restless_uri)) {
 						$request->redirect($restless_uri, 301);
@@ -554,7 +561,7 @@
 		 * @param sring $url The URL to translate
 		 * @return integer|boolean The type of redirect that should occur, FALSE if none
 		 */
-		private function translateRedirect(&$request_uri, $restless_uri)
+		private function translateRedirect(&$request_uri, $restless_uri = NULL)
 		{
 			$redirect_type = NULL;
 
@@ -569,8 +576,8 @@
 					break;
 
 				} elseif (preg_match('#^' . $pattern . '$#', $restless_uri)) {
-					$redirect_type = $redirect['type'];
 					$request_uri   = $restless_uri;
+					$redirect_type = 301;
 
 					break;
 				}
