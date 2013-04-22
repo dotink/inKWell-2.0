@@ -162,33 +162,32 @@
 				$cast_to = 'string';
 			}
 
-			if (get_magic_quotes_gpc() && (self::isPost() || self::isGet())) {
-				$value = self::stripSlashes($value);
-			}
-
+			//
 			// This normalizes an empty element to NULL
+			//
+
 			if ($cast_to === NULL && $value === '') {
 				$value = NULL;
 
 			} elseif ($cast_to == 'date') {
 				try {
-					$value = new Flourish\Date($value);
+					$value = new App\Date($value);
 				} catch (Flourish\ValidationException $e) {
-					$value = new Flourish\Date();
+					$value = new App\Date();
 				}
 
 			} elseif ($cast_to == 'time') {
 				try {
-					$value = new Flourish\Time($value);
+					$value = new App\Time($value);
 				} catch (Flourish\ValidationException $e) {
-					$value = new Flourish\Time();
+					$value = new App\Time();
 				}
 
 			} elseif ($cast_to == 'timestamp') {
 				try {
-					$value = new Flourish\Timestamp($value);
+					$value = new App\Timestamp($value);
 				} catch (Flourish\ValidationException $e) {
-					$value = new Flourish\Timestamp();
+					$value = new App\Timestamp();
 				}
 
 			} elseif ($cast_to == 'bool' || $cast_to == 'boolean') {
@@ -232,7 +231,7 @@
 			// Clean values coming in to ensure we don't have invalid UTF-8
 			if (($cast_to === NULL || $cast_to == 'string' || $cast_to == 'array') && $value !== NULL) {
 				$value = self::stripLowOrderBytes($value);
-				$value = Flourish\UTF8::clean($value);
+				$value = App\UTF8::clean($value);
 			}
 
 			return $value;
@@ -381,25 +380,6 @@
 
 
 		/**
-		 * Removes slashes from a value
-		 *
-		 * @access private
-		 * @param string|array $value The value to strip
-		 * @return string|array The `$value` with slashes stripped
-		 */
-		static private function stripSlashes($value)
-		{
-			if (is_array($value)) {
-				foreach ($value as $key => $sub_value) {
-					$value[$key] = self::stripSlashes($sub_value);
-				}
-				return $value;
-			}
-			return stripslashes($value);
-		}
-
-
-		/**
 		 * Construct a new request.  Empty arguments are pulled from the current request.
 		 *
 		 * @access public
@@ -411,7 +391,7 @@
 		 */
 		public function __construct($method = NULL, $accept = NULL, $url = NULL, $data = NULL)
 		{
-			$this->url      = new Flourish\URL($url);
+			$this->url      = new App\URL($url);
 			$this->files    = $_FILES;
 
 			$this->protocol = isset($_SERVER['SERVER_PROTOCOL'])
@@ -509,6 +489,7 @@
 			return isset($this->data[$key]);
 		}
 
+
 		/**
 		 * Checks whether or not the request's method matches a given value
 		 *
@@ -519,20 +500,6 @@
 		public function checkMethod($method)
 		{
 			return strtolower($method) == $this->method;
-		}
-
-		/**
-		 * Gets a value from ::get() and passes it through Flourish\HTML::encode()
-		 *
-		 * @access public
-		 * @param string $key The key to get - array elements can be accessed via `[sub-key]`
-		 * @param string $cast_to Cast the value to this data type
-		 * @param mixed $default_value The value to be used if the parameter is no set
-		 * @return string The encoded value
-		 */
-		public function encode($key, $cast_to = NULL, $default_value = NULL)
-		{
-			return Flourish\HTML::encode($this->get($key, $cast_to, $default_value));
 		}
 
 
@@ -914,6 +881,7 @@
 			header('Location: ' . $this->url);
 			exit(0);
 		}
+
 
 		/**
 		 * Sets a value into the request data

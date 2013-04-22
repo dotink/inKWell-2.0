@@ -32,8 +32,12 @@
 	//
 
 	$app->alias([
-		'Text' => 'Dotink\Flourish\Text',
-		'Date' => 'Dotink\Flourish\Date',
+		'Date'      => 'Dotink\Flourish\Date',
+		'Text'      => 'Dotink\Flourish\Text',
+		'Time'      => 'Dotink\Flourish\Time',
+		'Timestamp' => 'Dotink\Flourish\Timestamp',
+		'URL'       => 'Dotink\Flourish\URL',
+		'UTF8'      => 'Dotink\Flourish\UTF8'
 	]);
 
 	//
