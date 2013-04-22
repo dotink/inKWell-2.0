@@ -9,7 +9,7 @@
 
 		'methods' => [
 			'Dotink\Inkwell\View'   => 'make',
-			'Dotink\Flourish\Image' => ''
+			'Dotink\Flourish\Image' => 'output'
 		],
 
 	]);

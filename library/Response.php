@@ -147,6 +147,12 @@
 				self::$states = array_merge(self::$states, $config['states']);
 			}
 
+			foreach ($app['config']->getByType('array', '@rendering', 'methods') as $methods) {
+				foreach ($methods as $class => $function) {
+					self::registerRenderMethod($class, $function);
+				}
+			}
+
 			return TRUE;
 		}
 
@@ -409,22 +415,45 @@
 					$this->view = self::$states[$this->status]['body'];
 					$this->view = Flourish\Text::create($this->view)->compose();
 				} else {
-					$this->status = 'no_content';
+					$this->code   = 204;
+					$this->status = HTTP\NO_CONTENT;
 				}
 			}
 
 			//
 			// We want to let any renderers work their magic before doing anything else.  A good
 			// renderer will do whatever it can to resolve the response to a string.  Otherwise
-			// whatever the response is will be casted as a string and may not do what one
+			// whatever the response is will be casted as a (string) and may not do what one
 			// expects.
 			//
 
-			if ($this->view !== NULL && count($this->renderHooks)) {
-				foreach ($this->renderHooks as $renderCallback) {
-					if (is_callable($renderCallback)) {
-						call_user_func($renderCallback, $this);
+			if ($this->view !== NULL) {
+
+				if (is_object($this->view)) {
+					$view_class = get_class($this->view);
+					$class_key  = strtolower($view_class);
+
+					if (isset(self::$renderMethods[$class_key])) {
+						$method = self::$renderMethods[$class_key];
+
+						if (!is_callable([$this->view, $method])) {
+							throw new Flourish\ProgrammerException(
+								'Cannot render view with registered non-callable method %s()',
+								$method
+							);
+						}
+
+					} elseif (is_callable([$this->view, '__toString'])) {
+						$method = '__toString';
+
+					} else {
+						throw new Flourish\ProgrammerException(
+							'Cannot render object of class %s, no rendering method available',
+							$view_class
+						);
 					}
+
+					$this->view = $this->view->$method();
 				}
 			}
 
@@ -435,7 +464,7 @@
 
 			//
 			// If we don't have a type set we will try to determine the type by caching
-			// our view as a file and getting it's mimeType.
+			// our view as a file and getting its mimeType.
 			//
 
 			$this->type = (!$this->type)
