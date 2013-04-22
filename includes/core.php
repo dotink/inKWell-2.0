@@ -369,7 +369,8 @@
 			//
 
 			foreach ($config->getByType('array', 'Library') as $element_id => $library_config) {
-				$class = $config->classize($element_id);
+				$class    = $config->classize($element_id);
+				$autoload = !empty($library_config['autoload']);
 
 				if (!$class) {
 					throw new Flourish\ProgrammerException(
@@ -378,18 +379,18 @@
 					);
 				}
 
-				if (!empty($library_config['autoload'])) {
-					$has_root = isset($library_config['root_directory']);
+				if (isset($library_config['root_directory'])) {
+					$this->addRoot($element_id, $library_config['root_directory']);
 
-					if (!$has_root) {
-						throw new Flourish\ProgrammerException(
-							'Autoloading for class %s enabled, but no `root_directory` defined',
-							$class
-						);
+					if ($autoload) {
+						$this->addLoadingMap($class, 'IW: ' . $this->getRoot($class));
 					}
 
-					$this->addRoot($class, $library_config['root_directory']);
-					$this->addLoadingMap($class, 'PSR0: ' . $this->getRoot($class));
+				} elseif ($autoload) {
+					throw new Flourish\ProgrammerException(
+						'Autoloading for class %s enabled, but no `root_directory` defined',
+						$class
+					);
 				}
 			}
 
