@@ -25,9 +25,7 @@
 	},
 	"extra": {
 		"opus": {
-			"options": {
-				"framework": "inkwell-2.0"
-			}
+			"enabled": true
 		}
 	}
 }
