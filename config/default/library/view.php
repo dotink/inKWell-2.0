@@ -42,11 +42,16 @@
 		'minification_mode' => NULL,
 
 		//
-		// The cache directory is relative to the global write directory,
-		// defined in the inkwell.php core config file and is used to store
-		// cached versions of minified Javascript and CSS.
+		// The cache directory is relative to the document root and is used to store cached
+		// versions of various assets post-preprocessing.
 		//
 
-		'cache_directory' => 'cache'
+		'cache_directory' => 'cache',
+
+		//
+		// A directory containing helper functions to be included for matching types
+		//
+
+		'helper_root_directory' => 'library/helpers/view'
 	]);
 }

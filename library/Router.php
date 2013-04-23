@@ -415,6 +415,7 @@
 						$route  = $link['route'];
 						$action = $link['action'];
 						$params = array_combine($link['params'], $matches);
+						$params = array_map('urldecode', $params);
 
 						if (is_string($action)) {
 							$action = self::decompile($action, $params, $unused_params);

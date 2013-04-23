@@ -506,7 +506,7 @@
 					: strtolower($key);
 			}
 
-			if (!isset($this->roots[$key])) {
+			if (!isset($this->roots[$key]) || $key === NULL) {
 				if (!$default) {
 					$directory = $this->roots[NULL];
 				} else {
@@ -515,6 +515,7 @@
 						? $this->roots[NULL] . DS . $default
 						: $default;
 				}
+
 			} else {
 				$directory = $this->roots[$key];
 			}

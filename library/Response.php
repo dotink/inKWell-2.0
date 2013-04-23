@@ -457,8 +457,8 @@
 				}
 			}
 
-			$this->view   = (string) $this->view;
-			$this->code   = isset($aliases[$version][$this->code])
+			$this->view = (string) $this->view;
+			$this->code = isset($aliases[$version][$this->code])
 				? $aliases[$version][$this->code]
 				: $this->code;
 
