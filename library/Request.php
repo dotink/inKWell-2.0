@@ -753,6 +753,12 @@
 		}
 
 
+		/**
+		 * Gets the method for the request
+		 *
+		 * @access public
+		 * @return string The method used for the request
+		 */
 		public function getMethod()
 		{
 			return $this->method;
