@@ -4,8 +4,7 @@
 	 * @author Matthew J. Sahagian [mjs] <msahagian@dotink.org>
 	 */
 
-	$this->head->asset('common', 'scripts/jquery.js');
-	$this->head->asset('common', 'styles/inkling.css');
+	$this->head->asset('common', 'http://dotink.github.io/inKLing/inkling.css');
 
 	%>
 	<!doctype html>

@@ -4,6 +4,7 @@
 	use ArrayObject;
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
+	use Assetic\Asset;
 
 	/**
 	 * View Class
@@ -31,63 +32,146 @@
 
 
 		/**
-		 *
+		 * Cache directory relative to $_SERVER['DOCUMENT_ROOT']
 		 *
 		 * @static
 		 * @access private
 		 * @var string
 		 */
-		static private $helperRoot = NULL;
+		static private $cacheDirectory = 'cache';
 
 
 		/**
+		 * The cache mode (matches inkwell's execution mode)
 		 *
+		 * @static
+		 * @access private
+		 * @var string
+		 */
+		static private $cacheMode = EXEC_MODE_DEVELOPMENT;
+
+
+		/**
+		 * A lists of asset filters keyed by extension
+		 *
+		 * This supports css and js by default with no filters for compatibility.
+		 *
+		 * @static
+		 * @access private
+		 * @var array
+		 */
+		static private $assetFilters = [
+			'css' => [],
+			'js'  => []
+		];
+
+
+		/**
+		 * A map of asset extensions to their compiled extensions
+		 *
+		 * @static
+		 * @access private
+		 * @var array
+		 */
+		static private $extensionMap = [
+			'coffee' => 'js',
+			'css'    => 'css',
+			'dart'   => 'js',
+			'js'     => 'js',
+			'less'   => 'css',
+			'scss'   => 'css',
+			'ts'     => 'js'
+		];
+
+
+		/**
+		 * The directory containing our helpers, relative to the application root
+		 *
+		 * @static
+		 * @access private
+		 * @var string
+		 */
+		static private $helperDirectory = NULL;
+
+
+		/**
+		 * Runtime list of loaded helpers
+		 *
+		 * @static
+		 * @access private
+		 * @var array
 		 */
 		static private $helpers = array();
 
 
 		/**
+		 * Assets added to the view
 		 *
+		 * @access private
+		 * @var array
+		 */
+		private $assets = array();
+
+
+		/**
+		 * A shared view merged with subviews during rendering
+		 *
+		 * @access private
+		 * @var View
 		 */
 		private $head = NULL;
 
 
 		/**
+		 * Components (subviews, templates, etc) added to the view
 		 *
-		 */
-		private $assets = array();
-
-		/**
-		 *
+		 * @access private
+		 * @var array
 		 */
 		private $components = array();
 
 
 		/**
+		 * The current file being rendered
 		 *
+		 * @access private
+		 * @var string
 		 */
 		private $currentFile = NULL;
 
 
 		/**
+		 * Data added to the view
 		 *
+		 * @access private
+		 * @var array
 		 */
 		private $data = array();
 
 
 		/**
+		 * The root directory for this view element's templates
 		 *
+		 * @access private
+		 * @var string
 		 */
-		private $root = NULL;
+		private $rootDirectory = NULL;
 
 
 		/**
+		 * The primary template for this view
 		 *
+		 * @access private
+		 * @var string
 		 */
 		private $template = NULL;
 
+
 		/**
+		 * The type of view this is, based on the template extension
 		 *
+		 * @access private
+		 * @var string
 		 */
 		private $type = NULL;
 
@@ -103,8 +187,26 @@
 		{
 			self::$defaultRoot = $app->getRoot(__CLASS__);
 
-			if (isset($config['helper_root_directory'])) {
-				self::$helperRoot = $app->getRoot(NULL, $config['helper_root_directory']);
+			if (isset($config['helper_directory'])) {
+				self::$helperDirectory = $app->getRoot(NULL, $config['helper_directory']);
+			}
+
+			if (isset($config['cache_directory'])) {
+				self::$cacheDirectory = $config['cache_directory'];
+			}
+
+			if (isset($config['extension_map']) && is_array($config['extension_map'])) {
+				self::$extensionMap = array_merge(
+					self::$extensionMap,
+					$config['extension_map']
+				);
+			}
+
+			if (isset($config['asset_filters']) && is_array($config['asset_filters'])) {
+				self::$assetFilters = array_merge_recursive(
+					self::$assetFilters,
+					$config['asset_filters']
+				);
 			}
 		}
 
@@ -136,12 +238,12 @@
 				);
 			}
 
-			$this->template = $file_parts[0];
-			$this->type     = $file_parts[1];
-			$this->root     = $root;
+			$this->template      = $file_parts[0];
+			$this->type          = $file_parts[1];
+			$this->rootDirectory = $root;
 
 			if (!isset(self::$helpers[$this->type])) {
-				$helper_file = self::$helperRoot . DS . $this->type . '.php';
+				$helper_file = self::$helperDirectory . DS . $this->type . '.php';
 
 				if (file_exists($helper_file)) {
 					include($helper_file);
@@ -212,7 +314,17 @@
 		 */
 		public function asset($element, $asset)
 		{
-			$this->assets[$element] = $asset;
+			if (!isset($this->assets[$element])) {
+				$this->assets[$element] = array();
+			}
+
+			if (!preg_match('#^http(s?)://(.*)$#', $asset)) {
+				$asset = !preg_match(REGEX\ABSOLUTE_PATH, $asset)
+					? $_SERVER['DOCUMENT_ROOT'] . DS . ltrim($asset, '\\/' . DS)
+					: $asset;
+			}
+
+			$this->assets[$element][] = $asset;
 		}
 
 
@@ -332,7 +444,7 @@
 				foreach ($list as $i => $view) {
 					if (is_string($view)) {
 						$this->currentFile = !preg_match(REGEX\ABSOLUTE_PATH, $view)
-							? $this->root . DS . $view . '.php'
+							? $this->rootDirectory . DS . $view . '.php'
 							: $view;
 
 						$this->components[$element][$i] = $this->buffer(function() {
@@ -350,7 +462,7 @@
 			}
 
 			$this->currentFile = !preg_match(REGEX\ABSOLUTE_PATH, $this->template)
-				? $this->root . DS . $this->template . '.' . $this->type . '.php'
+				? $this->rootDirectory . DS . $this->template . '.' . $this->type . '.php'
 				: $this->template . '.' . $this->type . '.php';
 
 			return $this->buffer(function() {
@@ -393,13 +505,176 @@
 		/**
 		 *
 		 */
-		private function place($element)
+		private function buildAssetCache($cache_file, $files)
 		{
-			if (isset($this->components[$element])) {
-				foreach ($this->components as $list) {
-					echo implode($list);
+			$assets = [];
+
+			foreach ($files as $file) {
+				$extension = pathinfo($file, PATHINFO_EXTENSION);
+				$filters   = $this->getAssetFilters($extension);
+				$assets[]  = preg_match('#^http(s?)://(.*)$#', $file)
+					? new Asset\HttpAsset($file, $filters)
+					: new Asset\FileAsset($file, $filters);
+			}
+
+			$collection = new Asset\AssetCollection($assets);
+
+			if (!file_put_contents($cache_file, $collection->dump())) {
+				throw new Flourish\EnvironmentException(
+					'Could not write to asset cache file %s',
+					$cache_file
+				);
+			}
+		}
+
+
+		/**
+		 *
+		 */
+		private function getAssetsByType($element)
+		{
+			$assets_by_type = array();
+
+			foreach ($this->assets[$element] as $file) {
+				$extension = pathinfo($file, PATHINFO_EXTENSION);
+
+				if (!isset(self::$extensionMap[$extension])) {
+					throw new Flourish\ProgrammerException(
+						'Unsupported asset %s with type %s',
+						$file,
+						$extension
+					);
+				}
+
+				$asset_type = self::$extensionMap[$extension];
+
+				if (!isset($assets_by_type[$asset_type])) {
+					$assets_by_type[$asset_type] = array();
+				}
+
+				$assets_by_type[$asset_type][] = $file;
+			}
+
+			return $assets_by_type;
+		}
+
+
+		/**
+		 *
+		 */
+		private function getAssetFilters($extension)
+		{
+			$filters = array();
+
+			if (isset(self::$assetFilters[$extension])) {
+				foreach (self::$assetFilters[$extension] as $filter_class) {
+					$filters[] = new $filter_class();
 				}
 			}
+
+			return $filters;
+		}
+
+
+		/**
+		 *
+		 */
+		private function getAssetRebuildRequirement($cache_file, $files)
+		{
+			$rebuild = FALSE;
+
+			if (!file_exists($cache_file)) {
+				$rebuild = TRUE;
+
+			} elseif (self::$cacheMode == EXEC_MODE_DEVELOPMENT) {
+				$cache_mtime = filemtime($cache_file);
+
+				foreach ($files as $file) {
+					$file_mtime = $file;
+
+					if ($file_mtime > $cache_mtime) {
+						$rebuild = TRUE;
+						break;
+					}
+				}
+			}
+
+			return $rebuild;
+		}
+
+
+		/**
+		 *
+		 */
+		private function place($element, $preprocess = FALSE)
+		{
+			//
+			// Cycle through assets under this name
+			//
+
+			if (isset($this->assets[$element])) {
+				$assets_by_type = $this->getAssetsByType($element);
+
+				if ($preprocess) {
+					foreach ($assets_by_type as $type => $files) {
+						$cache_key  = md5(implode('::', $files));
+						$cache_file = implode(DS, [
+							$_SERVER['DOCUMENT_ROOT'],
+							self::$cacheDirectory,
+							$cache_key . '.' . $type
+						]);
+
+						if ($this->getAssetRebuildRequirement($cache_file, $files)) {
+							$this->buildAssetCache($cache_file, $files);
+						}
+
+						$assets_by_type[$type] = [$cache_file];
+					}
+				}
+
+				foreach ($assets_by_type as $type => $files) {
+					switch ($this->type . '::' . $type) {
+						case 'html::css':
+							$template = '<link rel="stylesheet" type="text/css" href="%s" />';
+							break;
+						case 'html::js':
+							$template = '<script type="text/javascript" src="%s"></script>';
+							break;
+						default:
+							$template = NULL;
+							break;
+					}
+
+					if ($template) {
+						foreach ($files as $file) {
+							echo sprintf($template, $this->translateWeb($file)) . PHP_EOL;
+						}
+					}
+				}
+
+			}
+
+			if (isset($this->components[$element])) {
+				foreach ($this->components as $list) {
+					echo implode(PHP_EOL, $list);
+				}
+			}
+		}
+
+
+		/**
+		 *
+		 */
+		private function translateWeb($file)
+		{
+			if (!preg_match('#^http(s?)://(.*)$#', $file)) {
+				$file = implode('?', [
+					str_replace($_SERVER['DOCUMENT_ROOT'], '', $file),
+					filemtime($file)
+				]);
+			}
+
+			return $file;
 		}
 	}
 }

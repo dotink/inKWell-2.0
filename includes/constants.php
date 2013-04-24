@@ -47,6 +47,13 @@
 
 		'REGEX\ABSOLUTE_PATH' => '#^(/|\\\\|[a-z]:(\\\\|/)|\\\\|//)#i',
 
+		//
+		// INKWELL EXECUTION MODES
+		//
+
+		EXEC_MODE_DEVELOPMENT => 'development',
+		EXEC_MODE_PRODUCTION  => 'production'
+
 	] as $constant => $value) {
 
 		//

@@ -168,6 +168,15 @@
 			$this->loaders['Dotink\Traits\*']     = $library_directory . DS . 'traits';
 
 			spl_autoload_register([$this, 'loadClass']);
+
+			$composer_autoloader = implode(DS, [
+				$this->getRoot(NULL, 'vendor'),
+				'autoload.php'
+			]);
+
+			if (file_exists($composer_autoloader)) {
+				include $composer_autoloader;
+			}
 		}
 
 

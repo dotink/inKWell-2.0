@@ -25,21 +25,30 @@
 		'root_directory' => 'user/views',
 
 		//
-		// Disable minification completely
+		// A directory containing helper functions to be included for matching types.  If the
+		// type of the primary template is 'html', it will attempt to load the file
+		// <helper_directory>/html.php -- this is relative to the application root
 		//
 
-		'disable_minification' => FALSE,
+		'helper_directory' => 'library/helpers/view',
 
 		//
-		// As per Flourish's code minification, we can set minification modes
-		// of either 'development' or 'production' -- The differences between
-		// the two relate to caching and are outlined under the Minification
-		// section at: http://flourishlib.com/docs/fTemplating
-		//
-		// Default is NULL which means the current core execution mode will be used
+		// The extension map contains a list of extensions and the type of extension they compile
+		// to.  This is used to determine which types of files can ultimately be combined and will
+		// be merged with the built in map.  You shouldn't need to touch this too much unless
+		// you want some seriously custom assetic filters. or pre-processing support.
 		//
 
-		'minification_mode' => NULL,
+		'extension_map' => [],
+
+		//
+		// The cache mode can be any valid inKWell execution mode, and is the same if left as
+		// NULL.  If the cache_mode equals EXEC_MODE_DEVELOPMENT then cached asset files will be
+		// reubilt if any included file was modified later than the cache file.  If it's
+		// EXEC_MODE_PRODUCTION then they will only be rebuilt if they're missing.
+		//
+
+		'cache_mode' => NULL,
 
 		//
 		// The cache directory is relative to the document root and is used to store cached
@@ -49,9 +58,16 @@
 		'cache_directory' => 'cache',
 
 		//
-		// A directory containing helper functions to be included for matching types
+		// You can add assetic compatible filter classes to the lists below.  Add a new key and
+		// an array of filters to support various languages (CoffeeScript, Less, etc).
+		//
+		// NOTE: Assetic filters by themselves may have additional dependencies.
 		//
 
-		'helper_root_directory' => 'library/helpers/view'
+		'asset_filters' => [
+			'css' => [],
+			'js'  => []
+		]
+
 	]);
 }
