@@ -17,7 +17,7 @@
 			<% $this->head->place('common') %>
 
 		</head>
-		<body>
+		<body id="<%= $this['id'] ?: 'page' %>">
 
 			<% $this->place('header') %>
 			<% $this->place('staple') %>
