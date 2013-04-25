@@ -36,7 +36,7 @@
 			'%' => '([-]?[0-9]+\.[0-9]+',
 			'!' => '([^/]+)',
 			'$' => '([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)',
-			'*' => '(.+)'
+			'*' => '(.*)'
 		];
 
 
@@ -223,6 +223,14 @@
 				}
 			}
 
+			if (strpos($route, '::') !== FALSE) {
+				$parts = explode('::', $route);
+
+				if (count($parts) == 2) {
+					$route = $parts;
+				}
+			}
+
 			return $route;
 		}
 
@@ -392,7 +400,7 @@
 		public function run(Interfaces\Request $request, Interfaces\Response $response)
 		{
 			$restless_uri  = NULL;
-			$request_uri   = $request->getPath();
+			$request_uri   = $request->getURL()->getPath();
 			$unused_params = array();
 
 			if (self::$restless) {

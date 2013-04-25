@@ -789,14 +789,14 @@
 
 
 		/**
-		 * Gets the path of the request URL
+		 * Gets the URL for the request
 		 *
 		 * @access public
-		 * @return string The path of the request URL
+		 * @return URL The URL for the request
 		 */
-		public function getPath()
+		public function getURL()
 		{
-			return $this->url->getPath();
+			return $this->url;
 		}
 
 
