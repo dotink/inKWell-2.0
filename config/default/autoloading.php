@@ -53,7 +53,6 @@
 
 		'map' => [
 
-			'vendor'  => 'PSR0: vendor'
 
 		]
 	]);
