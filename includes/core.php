@@ -167,8 +167,6 @@
 			$this->loaders['Dotink\Interfaces\*'] = $library_directory . DS . 'interfaces';
 			$this->loaders['Dotink\Traits\*']     = $library_directory . DS . 'traits';
 
-			spl_autoload_register([$this, 'loadClass']);
-
 			$composer_autoloader = implode(DS, [
 				$this->getRoot(NULL, 'vendor'),
 				'autoload.php'
@@ -177,6 +175,8 @@
 			if (file_exists($composer_autoloader)) {
 				include $composer_autoloader;
 			}
+
+			spl_autoload_register([$this, 'loadClass'], true, true);
 		}
 
 
@@ -379,7 +379,7 @@
 
 			foreach ($config->getByType('array', 'Library') as $element_id => $library_config) {
 				$class    = $config->classize($element_id);
-				$autoload = !empty($library_config['autoload']);
+				$autoload = !empty($library_config['auto_load']);
 
 				if (!$class) {
 					throw new Flourish\ProgrammerException(
@@ -392,7 +392,7 @@
 					$this->addRoot($element_id, $library_config['root_directory']);
 
 					if ($autoload) {
-						$this->addLoadingMap($class, 'IW: ' . $this->getRoot($class));
+						$this->addLoadingMap($class, 'IW: ' . $library_config['root_directory']);
 					}
 
 				} elseif ($autoload) {
