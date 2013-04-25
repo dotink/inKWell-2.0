@@ -114,6 +114,15 @@
 
 
 		/**
+		 * The emitters stack for looping with repeat()
+		 *
+		 * @access private
+		 * @var array
+		 */
+		private $emitters = array();
+
+
+		/**
 		 * A shared view merged with subviews during rendering
 		 *
 		 * @access private
@@ -314,8 +323,13 @@
 		 */
 		public function asset($element, $asset)
 		{
+
 			if (!isset($this->assets[$element])) {
 				$this->assets[$element] = array();
+			}
+
+			if (!isset($this->assets[$element][$this->currentFile])) {
+				$this->assets[$element][$this->currentFile] = array();
 			}
 
 			if (!preg_match('#^http(s?)://(.*)$#', $asset)) {
@@ -324,7 +338,7 @@
 					: $asset;
 			}
 
-			$this->assets[$element][] = $asset;
+			$this->assets[$element][$this->currentFile][] = $asset;
 		}
 
 
@@ -337,7 +351,10 @@
 				return;
 			}
 
+			$this->emitters[] = $emitter;
+
 			if (is_array($this[$element])) {
+
 				foreach ($this[$element] as $i => $value) {
 					$emitter($value, $i);
 				}
@@ -345,6 +362,8 @@
 			} else {
 				$emitter($this[$element], 0);
 			}
+
+			array_pop($this->emitters);
 		}
 
 
@@ -357,7 +376,9 @@
 		}
 
 
-
+		/**
+		 *
+		 */
 		public function join($element, $separator = '::')
 		{
 			if (!$this->has($element)) {
@@ -365,6 +386,64 @@
 			}
 
 			return implode($separator, $this[$element]);
+		}
+
+
+		/**
+		 *
+		 */
+		public function make()
+		{
+			$this->head->currentFile =& $this->currentFile;
+
+			foreach ($this->components as $element => $list) {
+				foreach ($list as $i => $view) {
+					if (is_string($view)) {
+						$this->currentFile = !preg_match(REGEX\ABSOLUTE_PATH, $view)
+							? $this->rootDirectory . DS . $view . '.php'
+							: $view;
+
+						$this->components[$element][$i] = $this->buffer(function() {
+							include $this->currentFile;
+						});
+
+					} elseif (is_object($view) && $view instanceof self) {
+						$view->parent                   = $this;
+						$this->components[$element][$i] = $view->make();
+
+						// merge head
+
+					} else {
+
+					}
+				}
+			}
+
+			$this->currentFile = !preg_match(REGEX\ABSOLUTE_PATH, $this->template)
+				? $this->rootDirectory . DS . $this->template . '.' . $this->type . '.php'
+				: $this->template . '.' . $this->type . '.php';
+
+			$view = $this->buffer(function() {
+				include $this->currentFile;
+			});
+
+			return $view;
+		}
+
+
+		/**
+		 *
+		 */
+		public function offsetGet($offset)
+		{
+			//
+			// We overload this so we can return null for easy defaults such as the following:
+			// $this['element'] ?: 'Default'
+			//
+
+			return isset($this[$offset])
+				? parent::offsetGet($offset)
+				: NULL;
 		}
 
 
@@ -436,53 +515,21 @@
 
 
 		/**
+		 * Repeat the last emitter using a traversable
 		 *
+		 * @a
 		 */
-		public function make()
+		public function repeat($traversable)
 		{
-			foreach ($this->components as $element => $list) {
-				foreach ($list as $i => $view) {
-					if (is_string($view)) {
-						$this->currentFile = !preg_match(REGEX\ABSOLUTE_PATH, $view)
-							? $this->rootDirectory . DS . $view . '.php'
-							: $view;
-
-						$this->components[$element][$i] = $this->buffer(function() {
-							include $this->currentFile;
-						});
-
-					} elseif (is_object($view) && $view instanceof self) {
-						$view->parent                   = $this;
-						$this->components[$element][$i] = $view->make();
-
-					} else {
-
-					}
-				}
+			if (!count($this->emitters)) {
+				return;
 			}
 
-			$this->currentFile = !preg_match(REGEX\ABSOLUTE_PATH, $this->template)
-				? $this->rootDirectory . DS . $this->template . '.' . $this->type . '.php'
-				: $this->template . '.' . $this->type . '.php';
+			$emitter = $this->emitters[count($this->emitters) - 1];
 
-			return $this->buffer(function() {
-				include $this->currentFile;
-			});
-		}
-
-		/**
-		 *
-		 */
-		public function offsetGet($offset)
-		{
-			//
-			// We overload this so we can return null for easy defaults such as the following:
-			// $this['element'] ?: 'Default'
-			//
-
-			return isset($this[$offset])
-				? parent::offsetGet($offset)
-				: NULL;
+			foreach ($traversable as $i => $value) {
+				$emitter($value, $i);
+			}
 		}
 
 
@@ -535,24 +582,26 @@
 		{
 			$assets_by_type = array();
 
-			foreach ($this->assets[$element] as $file) {
-				$extension = pathinfo($file, PATHINFO_EXTENSION);
+			foreach (array_reverse(array_keys($this->assets[$element])) as $file) {
+				foreach ($this->assets[$element][$file] as $asset) {
+					$extension = pathinfo($asset, PATHINFO_EXTENSION);
 
-				if (!isset(self::$extensionMap[$extension])) {
-					throw new Flourish\ProgrammerException(
-						'Unsupported asset %s with type %s',
-						$file,
-						$extension
-					);
+					if (!isset(self::$extensionMap[$extension])) {
+						throw new Flourish\ProgrammerException(
+							'Unsupported asset %s with type %s',
+							$asset,
+							$extension
+						);
+					}
+
+					$asset_type = self::$extensionMap[$extension];
+
+					if (!isset($assets_by_type[$asset_type])) {
+						$assets_by_type[$asset_type] = array();
+					}
+
+					$assets_by_type[$asset_type][] = $asset;
 				}
-
-				$asset_type = self::$extensionMap[$extension];
-
-				if (!isset($assets_by_type[$asset_type])) {
-					$assets_by_type[$asset_type] = array();
-				}
-
-				$assets_by_type[$asset_type][] = $file;
 			}
 
 			return $assets_by_type;
@@ -613,6 +662,7 @@
 			//
 
 			if (isset($this->assets[$element])) {
+
 				$assets_by_type = $this->getAssetsByType($element);
 
 				if ($preprocess) {
