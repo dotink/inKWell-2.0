@@ -9,7 +9,7 @@
 	%>
 	<header>
 		<a href="/">
-			<img class="logo" src="http://inkwell.dotink.org/assets/images/inkwell_logo_dark.png" />
+			<img class="logo" src="/images/inkwell_logo_dark.png" />
 		</a>
 		<h1>A PHP Framework for PHP Developers</h1>
 	</header>
