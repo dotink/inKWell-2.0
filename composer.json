@@ -22,7 +22,9 @@
 		"dotink/flourish": "dev-master",
 		"dotink/container-trait": "dev-master",
 		"dotink/emitter-trait": "dev-master",
-		"kriswallsmith/assetic": "1.1.*@dev"
+		"kriswallsmith/assetic": "1.1.*@dev",
+		"dotink/markdown-extra-extended": "dev-master",
+		"imarc/pluck": "dev-master"
 	},
 	"extra": {
 		"opus": {

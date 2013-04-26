@@ -14,7 +14,8 @@
 
 			<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
-			<% $this->head->place('common') %>
+			<% $this->head->place('common')    %>
+			<% $this->head->place('highlight') %>
 
 		</head>
 		<body id="<%= $this['id'] ?: 'page' %>">
