@@ -32,15 +32,15 @@
 		// Permanent redirects.
 		//
 
-		301 => [
+		HTTP\REDIRECT_PERMANENT => [
 
 		],
 
 		//
-		// Temporary redirects
+		// Temporary redirects (keeps original method)
 		//
 
-		307 => [
+		HTTP\REDIRECT_TEMPORARY => [
 
 		],
 	]);

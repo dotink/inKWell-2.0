@@ -341,6 +341,57 @@
 
 
 		/**
+		 * Gets the status set on the response
+		 *
+		 *
+		 */
+		public function checkCode($min = NULL, $max = NULL)
+		{
+			if (!$max) {
+				return $this->code == $min;
+			} else {
+				return $this->code >= $min && $this->code <= $max;
+			}
+		}
+
+
+		/**
+		 * Gets the status set on the response
+		 *
+		 * @access public
+		 * @return boolean
+		 */
+		public function checkStatus($status)
+		{
+			return $this->status == $status;
+		}
+
+
+		/**
+		 * Gets the status set on the response
+		 *
+		 * @access public
+		 * @return int The current HTTP code for the response
+		 */
+		public function getCode()
+		{
+			return $this->code;
+		}
+
+
+		/**
+		 * Gets the status set on the response
+		 *
+		 * @access public
+		 * @return string The current HTTP status for the response
+		 */
+		public function getStatus()
+		{
+			return $this->status;
+		}
+
+
+		/**
 		 * Resolves a response one way or another.
 		 *
 		 * This will basically turn whatever you pass it into a response object.  The assumption

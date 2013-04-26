@@ -33,7 +33,7 @@
 		static private $patterns = [
 			'+' => '([1-9]|[1-9][0-9]+)',
 			'#' => '([-]?(?:[0-9]+))',
-			'%' => '([-]?[0-9]+\.[0-9]+',
+			'%' => '([-]?[0-9]+\.[0-9]+)',
 			'!' => '([^/]+)',
 			'$' => '([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)',
 			'*' => '(.*)'
@@ -75,6 +75,15 @@
 		 * @var string
 		 */
 		private $entryAction = NULL;
+
+
+		/**
+		 * A list of error handlers
+		 *
+		 * @access private
+		 * @var array
+		 */
+		private $handlers = array();
 
 
 		/**
@@ -291,6 +300,36 @@
 
 
 		/**
+		 * Handles an error with an action in the routes collection
+		 *
+		 * @access public
+		 * @param string $base_url The base url for all the routes
+		 * @param string $error The error status string (see HTTP namespace)
+		 * @param mixed $action The action to call on error
+		 * @return void;
+		 */
+		public function handle($base_url, $error, $action)
+		{
+			$base_url = rtrim($base_url, '/');
+			$hash     = md5($base_url . $error);
+
+			if (isset($this->handlers[$hash])) {
+				throw new Flourish\ProgrammerException(
+					'There is already a "%s" handler set for base URL "%s"',
+					$error,
+					$base_url
+				);
+			}
+
+			$this->handlers[$hash] = [
+				'base_url' => $base_url,
+				'error'    => $error,
+				'action'   => $action
+			];
+		}
+
+
+		/**
 		 * Links a route to an action in the routes collection
 		 *
 		 * If an existing link matches matches the same compiled pattern then the action is
@@ -298,14 +337,18 @@
 		 * that match are OK, and array callables that match are OK.
 		 *
 		 * @access public
+		 * @param string $base_url The base url for all the routes
 		 * @param string $route The route key/mapping
-		 * @param callable $action The action to execute, callback strings are custom
+		 * @param mixed $action The action to execute, callback strings are custom
 		 * @return void
 		 * @throws Flourish\ProgrammerException in the case of conflicting routes
 		 */
-		public function link($route, $action)
+		public function link($base_url, $route, $action)
 		{
-			list($pattern, $params) = self::compile($route);
+			$base_url = rtrim($base_url, '/');
+			$route    = ltrim($route, '/');
+
+			list($pattern, $params) = self::compile($base_url . '/' .$route);
 
 			if (isset($this->links[$pattern])) {
 
@@ -335,9 +378,10 @@
 			}
 
 			$this->links[$pattern] = [
-				'action' => $action,
-				'params' => $params,
-				'route'  => $route
+				'base_url' => $base_url,
+				'action'   => $action,
+				'params'   => $params,
+				'route'    => $route
 			];
 		}
 
@@ -436,31 +480,7 @@
 
 						$this->emit('beginAction', $request);
 
-						ob_start();
-
-						if ($action instanceof \Closure) {
-							$controller_response = $action([
-								'request'  => $request,
-								'response' => $response,
-								'router'   => $this
-							]);
-
-						} elseif (is_array($action)) {
-							$this->controller = new $action[0]([
-								'request'  => $request,
-								'response' => $response,
-								'router'   => $this
-							]);
-
-							$controller_response = $this->controller->$action[1]();
-
-						} else {
-							$controller_response = $action();
-						}
-
-						$response = ($output = ob_get_clean())
-							? $response(HTTP\OK, NULL, [], $output)
-							: $response->resolve($controller_response);
+						$response = $this->captureResponse($action, $request, $response);
 
 						$this->emit('endAction', $response);
 
@@ -476,7 +496,162 @@
 				}
 			}
 
+			return $response->checkCode(400, 599)
+				? $this->handleError($request, $response)
+				: $response;
+		}
+
+
+		/**
+		 * Calls an action and returns an action response
+		 *
+		 * @access private
+		 * @param mixed $action The action to call
+		 * @param Interfaces\Request $request The current request being made
+		 * @param Interfaces\Response $response The current response
+		 */
+		private function callAction($action, $request, $response)
+		{
+			$context = [
+				'request'  => $request,
+				'response' => $response,
+				'router'   => $this
+			];
+
+			if ($action instanceof \Closure) {
+				$action_response = $action($context);
+
+			} elseif (is_array($action)) {
+				$class = is_object($action[0])
+					? get_class($action[0])
+					: $action[0];
+
+				if (!in_array(self::CONTROLLER_INTERFACE, class_implements($class))) {
+					$this->controller = new $action[0]();
+					$action_response  = $this->controller->$action[1]($context);
+
+				} else {
+					$this->controller = new $action[0]($context);
+					$action_response  = $this->controller->$action[1]();
+				}
+
+			} else {
+				$action_response = $action();
+			}
+
+			return $action_response;
+		}
+
+
+		/**
+		 * Captures a response from a called action
+		 *
+		 * @access private
+		 * @param mixed $action The action to call
+		 * @param Interfaces\Request $request The current request being made
+		 * @param Interfaces\Response $response The current response
+		 * @return Interfaces\Response The new or modified response
+		 */
+		private function captureResponse($action, $request, $response)
+		{
+			ob_start();
+
+			$action_response = $this->callAction($action, $request, $response);
+
+			$response = ($output = ob_get_clean())
+				? $response(HTTP\OK, NULL, [], $output)
+				: $response->resolve($action_response);
+
 			return $response;
+		}
+
+		/**
+		 * Handles an error by calling an error handler (yeah I know)
+		 *
+		 * @access private
+		 * @param Interfaces\Request $request The current request being made
+		 * @param Interfaces\Response $response The current response
+		 * @return Interfaces\Response The new or modified response
+		 */
+		private function handleError($request, $response)
+		{
+			$base_urls  = array();
+			$candidates = array();
+			$handler    = NULL;
+			$error      = $response->getStatus();
+			$root_hash  = md5(NULL . $error);
+
+			//
+			// Remove all handlers which don't handle our error while collecting
+			// their base URLs
+			//
+
+			foreach ($this->handlers as $candidate) {
+				$base_urls[] = $candidate['base_url'];
+
+				if ($candidate['error'] == $error) {
+					$candidates[] = $candidate;
+				}
+			}
+
+			//
+			// Remove any base URLs that aren't actually at the base of our request path
+			//
+
+			$base_urls = array_filter($base_urls, function($base_url) use ($request) {
+				return $base_url
+					? strpos($request->getURL()->getPath(), $base_url) === 0
+					: FALSE;
+			});
+
+			//
+			// Sort the base URLs by longest first
+			//
+
+			usort($base_urls, function($a, $b) {
+				$a_len = strlen($a);
+				$b_len = strlen($b);
+
+				if ($a_len == $b_len) {
+					return 0;
+				} else {
+					return $a_len > $b_len ? 1 : -1;
+				}
+			});
+
+			//
+			// Iterate over each base URL (longest will be first) and each remaining candidate
+			// as soon as a candidate's base URL matches ours, that's our best pick
+			//
+
+			foreach ($base_urls as $base_url) {
+				foreach ($candidates as $candidate) {
+					if ($candidate['base_url'] == $base_url) {
+						$handler = $candidate;
+						break 2;
+					}
+				}
+			}
+
+			if (!$handler) {
+				if (isset($this->handlers[$root_hash])) {
+					$handler = $this->handlers[$root_hash];
+				} else {
+
+					//
+					// If we get here it means we did all that for nothing and just want to
+					// return the original response...
+					//
+
+					return $response;
+				}
+			}
+
+			$action = is_string($handler['action'])
+				? self::decompile($handler['action'], array())
+				: $handler['action'];
+
+			return $this->captureResponse($action, $request, $response);
 		}
 
 
@@ -518,13 +693,6 @@
 					);
 				}
 
-				if (!in_array(self::CONTROLLER_INTERFACE, class_implements($class))) {
-					$this->triggerContinue(
-						'Action class "%s" does not implement %s',
-						$class,
-						self::CONTROLLER_INTERFACE
-					);
-				}
 
 				if (strpos('__', $method) === 0) {
 					$this->triggerContinue(

@@ -59,8 +59,8 @@
 			],
 
 			HTTP\NOT_FOUND => [
-				'code'    => 404,
-				'body'    => 'The requested resource could not be found'
+				'code' => 404,
+				'body' => 'The requested resource could not be found'
 			],
 
 			HTTP\NOT_ALLOWED => [

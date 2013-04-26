@@ -1,7 +1,7 @@
 <?php namespace Dotink\Inkwell
 {
 	//
-	// Route maps take the following format:
+	// Route actions take the following format:
 	//
 	// route => action
 	//
@@ -20,6 +20,7 @@
 	//
 	// ! = Any character except a forward slash
 	// # = An integer with optional minus sign in front for negative values
+	// + = A positive integer greater than or equal to 1
 	// % = A float, with optional minus sign in front for negative values
 	// $ = A valid PHP variable or class name
 	// * = All characters, including forward slash (used for trailing wildcards)
@@ -54,10 +55,34 @@
 	//
 
 	return Config::create(['Core'], [
+
+		//
+		// The base URL is prepended to actions when compiling the route and is used for picking
+		// the best suited error handler in the event of error.  You can have mulitple
+		// error handlers so long as they have different base URLs.
+		//
+
 		'base_url' => '/',
+
+		//
+		// Routing actions
+		//
 
 		'actions' => [
 			'/system_information' => 'phpinfo'
+		],
+
+		//
+		// Handlers are used in the event of error code 400 - 599 on the response.  They are
+		// basically controller actions for requests that end up in error.
+		//
+
+		'handlers' => [
+
+			//
+			// HTTP\NOT_FOUND => 'ErrorController::run'
+			//
+
 		]
 	]);
 }

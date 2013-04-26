@@ -821,12 +821,18 @@
 
 			foreach ($this['config']->getByType('array', '@routing') as $config) {
 				$base_url = isset($config['base_url']) && $config['base_url']
-					? rtrim($config['base_url'], '/')
-					: '';
+					? $config['base_url']
+					: NULL;
 
 				if (isset($config['actions']) && is_array($config['actions'])) {
 					foreach ($config['actions'] as $route => $action) {
-						$router->link($base_url . '/' . ltrim($route, '/'), $action);
+						$router->link($base_url, $route, $action);
+					}
+				}
+
+				if (isset($config['handlers']) && is_array($config['handlers'])) {
+					foreach ($config['handlers'] as $error => $action) {
+						$router->handle($base_url, $error, $action);
 					}
 				}
 			}

@@ -42,6 +42,15 @@
 		'HTTP\UNAVAILABLE'    => 'Service Unavailable',
 
 		//
+		// HTTP REDIRECTS
+		//
+
+		'HTTP\REDIRECT_PERMANENT' => 301,
+		'HTTP\REDIRECT_FOUND'     => 302, // Redirects with get method, assuming processing done
+		'HTTP\REDIRECT_SEE_OTHER' => 303,
+		'HTTP\REDIRECT_TEMPORARY' => 307, // Redirects with original method, assuming nothing done
+
+		//
 		// REGULAR EXPRESSIONS
 		//
 
