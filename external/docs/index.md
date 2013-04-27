@@ -1,6 +1,6 @@
 #### More Information Than You Can Shake a Stick At {#docs}
 
-##### Getting Started
+##### Getting Started is Easy &mdash; Let's Look at the Basics.
 
 - [Installation](/getting_started/installation)
 - [Routing](/getting_started/routing)
@@ -11,23 +11,22 @@
 - [Views](/getting_started/views)
 - [Working with Assets](/getting_started/working_with_assets)
 
-##### Configuration
+##### There's a Lot You Can Do Under the Hood.
 
-- Understanding Configuration Types
-- Dev vs. Prod Environments
-- Directory Structure
-- The Inkwell Interface
-- Setting Up Asset Filters
-- Advanced Auto-loading
+- [Understanding Configuration Types]()
+- [Dev vs. Prod Environments]()
+- [Directory Structure]()
+- [The Inkwell Interface]()
+- [Setting Up Asset Filters]()
+- [Advanced Auto-loading]()
 
-##### Tutorials
+##### Quick Guides Give You a Great Starting Point
 
-- Creating a Super-Simple Blog
-- Staying Restful: JSON APIs
+- [Creating a Super-Simple Blog]()
+- [Staying Restful: JSON APIs]()
 
+##### Got the Hang of Things?  Try These On for Size.
 
-##### Advanced
-
-- Using the Console
-- Creating Modules
-- Custom Scaffolding
+- [Using the Console]()
+- [Creating Modules]()
+- [Custom Scaffolding]()

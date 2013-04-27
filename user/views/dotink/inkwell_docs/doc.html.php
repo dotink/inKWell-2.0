@@ -7,6 +7,7 @@
 	 $this->head->asset('highlight', 'http://yandex.st/highlightjs/7.3/styles/tomorrow-night-bright.min.css');
 	 $this->head->asset('highlight', 'http://yandex.st/highlightjs/7.3/highlight.min.js');
 
+	 $this->head->asset('common', 'http://dotink.github.io/inKLing/theme.css');
 	 $this->head->asset('common', 'styles/dotink/inkwell_docs/main.css');
 	 $this->head->asset('common', 'http://code.jquery.com/jquery-1.9.1.min.js');
 	 $this->head->asset('common', 'scripts/dotink/toc_sex.js');
@@ -24,7 +25,7 @@
 
 	<h1><%= $this['title'] %></h1>
 	<div class="group">
-		<div class="aside toc">
+		<div class="preface toc">
 			<%= $this['toc'] %>
 		</div>
 		<div class="principal">

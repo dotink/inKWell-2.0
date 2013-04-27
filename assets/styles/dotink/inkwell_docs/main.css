@@ -3,18 +3,28 @@ html {
 }
 
 body {
-	width: 1160px;
+	padding: 2.5%;
 	margin: 3em auto;
-	padding: 40px;
 	background-color: #fff;
-	border-radius: 10px;
 	border: solid 1px #ddd;
+}
+
+#homepage,
+#doc {
+	width: 85%;
+}
+
+#homepage .brochure {
+	background-color: #eee;
+	padding: 2em;
+	border-radius: 2em;
 }
 
 #homepage header {
 	text-align: center;
 	border-bottom: dotted 1px #ccc;
 	margin-bottom: 2em;
+	background-color: #fff;
 }
 
 #homepage h1 {
@@ -22,20 +32,19 @@ body {
 }
 
 #homepage h2 {
-	color: #FF8A00;
+	border-bottom: none;
 	text-align: center;
 }
 
-#homepage h4 {
-	text-align: center;
-}
 
 #homepage .brochure {
 	text-align: center;
 	margin-top: 3em;
+	margin-bottom: 3%;
 }
 
 	#homepage .brochure section {
+		padding: 2em;
 		border-left: solid 1px #ccc;
 		height: 100%;
 	}
@@ -45,22 +54,21 @@ body {
 	}
 
 #homepage h4 {
-	border-top: solid 1px #999;
-	border-bottom: solid 1px #999;
+	margin-bottom: 1em;
+}
+
+object {
 	padding: 1em;
-	background-color: #f6f6f6;
-	width: 80%;
-	margin: 1em auto;
 }
 
 #homepage .group > ul {
 	float: left;
 	width: 30%;
-	border-left: solid 3px #3C7E98;
 	list-style: none;
 	padding-left: 1em;
 	margin-left: 0;
 	position: relative;
+	border-left: dotted 1px #bbb;
 }
 
 #homepage .group > :nth-child(6n) {
@@ -68,8 +76,8 @@ body {
 }
 
 #homepage .group > ul li {
-	width: 48%;
-	margin-right: 2%;
+	width: 45%;
+	margin-right: 5%;
 	float: left;
 }
 
@@ -78,12 +86,12 @@ body {
 	width: 15%;
 	text-align: right;
 	padding: .5em;
+	padding-top: 0;
 	margin: 0;
 	color: #98483C;
 }
 
 #homepage .news {
-	margin-top: 2em;
 	-moz-column-count: 3;
 	-moz-column-gap: 2em;
 	-webkit-column-count: 3;
