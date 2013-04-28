@@ -150,6 +150,11 @@
 		 */
 		protected function triggerError($error, $headers = array(), $message = NULL)
 		{
+			if (func_num_args() == 2) {
+				$message = func_get_arg(1);
+				$headers = array();
+			}
+
 			$this['response']($error, NULL, $headers, $message);
 
 			throw new Flourish\YieldException(

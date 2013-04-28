@@ -456,7 +456,7 @@
 				$this->exchangeArray(array_merge($this, $element));
 			} else {
 				if (is_string($element)) {
-					$this[$element] = $value;
+					$this->offsetSet($element, $value);
 				} else {
 					throw new Flourish\ProgrammerException(
 						'Cannot set element with non-string reference of type %s',
@@ -503,14 +503,17 @@
 		public function push($element, $value)
 		{
 			if (!isset($this[$element])) {
-				$this[$element] = [];
+				$this->offsetSet($element, []);
 			}
 
 			if (!is_array($this[$element])) {
-				$this[$element] = [$this[$element]];
+				$this->offsetSet($element, [$this[$element]]);
 			}
 
-			$this[$element][] = $value;
+			$stack   = $this->offsetGet($element);
+			$stack[] = $value;
+
+			$this->offsetSet($element, $stack);
 		}
 
 
