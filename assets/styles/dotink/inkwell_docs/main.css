@@ -9,7 +9,7 @@ body {
 	border: solid 1px #ddd;
 }
 
-#not_found
+#not_found,
 #homepage,
 #doc {
 	width: 85%;

@@ -12,6 +12,8 @@
 	 $this->head->asset('common', 'http://code.jquery.com/jquery-1.9.1.min.js');
 	 $this->head->asset('common', 'scripts/dotink/toc_sex.js');
 
+	 $this->head->push('title', $this['title']);
+
 	%>
 	<script type="text/javascript">
 
@@ -46,8 +48,6 @@
 			</script>
 			<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 			<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-
-
 		</div>
 	</div>
 	<%

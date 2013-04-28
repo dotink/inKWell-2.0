@@ -13,20 +13,20 @@
 
 ##### There's a Lot You Can Do Under the Hood.
 
-- [Understanding Configuration Types]()
-- [Dev vs. Prod Environments]()
-- [Directory Structure]()
-- [The Inkwell Interface]()
-- [Setting Up Asset Filters]()
-- [Advanced Auto-loading]()
+- [Understanding Configuration Types](extending/configuration_types)
+- [Dev vs. Prod Environments](extending/multiple_environments)
+- [Directory Structure](extending/directory_structure)
+- [The Inkwell Interface](extending/inkwell_interface)
+- [Setting Up Asset Filters](extending/asset_filters)
+- [Advanced Auto-loading](extending/auto_loading)
 
 ##### Quick Guides Give You a Great Starting Point
 
-- [Creating a Super-Simple Blog]()
-- [Staying Restful: JSON APIs]()
+- [Creating a Super-Simple Blog](guides/simple_blog)
+- [Staying Restful: JSON APIs](guides/json_apis)
 
 ##### Got the Hang of Things?  Try These On for Size.
 
-- [Using the Console]()
-- [Creating Modules]()
-- [Custom Scaffolding]()
+- [Using the Console](advanced/console)
+- [Creating Modules](advanced/modules)
+- [Custom Scaffolding](advanced/scaffolding)
