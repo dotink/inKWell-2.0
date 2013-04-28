@@ -545,7 +545,9 @@
 			}
 
 			foreach ($this->headers as $header => $value) {
-				 $headers[] = $header . ': ' . $value;
+				if ($value !== NULL) {
+					$headers[] = $header . ': ' . $value;
+				}
 			}
 
 			if ($headers_only && Flourish\Core::checkSAPI('cli')) {
