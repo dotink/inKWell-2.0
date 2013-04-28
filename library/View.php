@@ -105,6 +105,16 @@
 
 
 		/**
+		 * Registered view template/root combinations
+		 *
+		 * @static
+		 * @access private
+		 * @var array
+		 */
+		static private $registeredViews = array();
+
+
+		/**
 		 * Assets added to the view
 		 *
 		 * @access private
@@ -223,13 +233,34 @@
 		/**
 		 *
 		 */
+		static public function register($alias, $template, $root_directory)
+		{
+			self::$registeredViews[$alias] = [
+				'template' => $template,
+				'root'     => $root_directory
+			];
+		}
+
+
+		/**
+		 *
+		 */
 		static public function create($view, array $components = array(), array $data = array())
 		{
-			if (strpos('.', $view) === FALSE) {
-				$view = self::DEFAULT_TEMPLATE . '.' . $view;
+			if (strpos($view, '.') === FALSE) {
+				if (isset(self::$registeredViews[$view])) {
+					$template       = self::$registeredViews[$view]['file'];
+					$root_directory = self::$registeredViews[$view]['root'];
+				} else {
+					$template       = self::DEFAULT_TEMPLATE . '.' . $view;
+					$root_directory = self::$defaultRoot;
+				}
+			} else {
+				$template       = $view;
+				$root_directory = NULL;
 			}
 
-			$view = new self($view, self::$defaultRoot);
+			$view = new self($template, $root_directory);
 
 			return $view($components, $data);
 		}
@@ -238,38 +269,36 @@
 		/**
 		 *
 		 */
-		public function __construct($view, $root)
+		public function __construct($view, $root = NULL)
 		{
-			if (count($file_parts = explode('.', $view)) != 2) {
-				throw new Flourish\ProgrammerException(
-					'Invalid view %s specified',
-					$view
-				);
-			}
+			if (is_object($view) && $view instanceof self) {
+				$this->type  =  $view->type;
 
-			$this->template      = $file_parts[0];
-			$this->type          = $file_parts[1];
-			$this->rootDirectory = $root;
+			} else {
+				if (count($file_parts = explode('.', $view)) != 2) {
+					throw new Flourish\ProgrammerException(
+						'Invalid view %s specified',
+						$view
+					);
+				}
 
-			if (!isset(self::$helpers[$this->type])) {
-				$helper_file = self::$helperDirectory . DS . $this->type . '.php';
+				$this->template      = $file_parts[0];
+				$this->type          = $file_parts[1];
+				$this->rootDirectory = $root;
 
-				if (file_exists($helper_file)) {
-					include($helper_file);
+				if (!isset(self::$helpers[$this->type])) {
+					$helper_file = self::$helperDirectory . DS . $this->type . '.php';
 
-					self::$helpers[$this->type] = TRUE;
+					if (file_exists($helper_file)) {
+						include($helper_file);
 
-				} else {
-					self::$helpers[$this->type] = FALSE;
+						self::$helpers[$this->type] = TRUE;
+
+					} else {
+						self::$helpers[$this->type] = FALSE;
+					}
 				}
 			}
-
-			//
-			// The head is essentially a non-templated empty copy of this object.  It will
-			// be merged with all other heads.
-			//
-
-			$this->head = clone $this;
 		}
 
 
@@ -323,7 +352,6 @@
 		 */
 		public function asset($element, $asset)
 		{
-
 			if (!isset($this->assets[$element])) {
 				$this->assets[$element] = array();
 			}
@@ -385,23 +413,36 @@
 				return;
 			}
 
-			return implode($separator, $this[$element]);
+			return is_array($this[$element])
+				? implode($separator, $this->offsetGet($element))
+				: (string) $this[$element];
 		}
 
 
 		/**
+		 * Compiles this view
 		 *
+		 * @access public
+		 * @return string The view compiled to a string
 		 */
-		public function make()
+		public function make($level = 0)
 		{
-			$this->head->currentFile =& $this->currentFile;
+			if (!$this->head) {
+				$this->head = new self($this);
+			}
+
+			if (!isset($this->rootDirectory) && isset($this->parent)) {
+				$this->rootDirectory = $this->parent->rootDirectory;
+			}
 
 			foreach ($this->components as $element => $list) {
 				foreach ($list as $i => $view) {
 					if (is_string($view)) {
-						$this->currentFile = !preg_match(REGEX\ABSOLUTE_PATH, $view)
-							? $this->rootDirectory . DS . $view . '.php'
-							: $view;
+						$this->setCurrentFile(
+							!preg_match(REGEX\ABSOLUTE_PATH, $view)
+								? $this->rootDirectory . DS . $view . '.php'
+								: $view
+						);
 
 						$this->components[$element][$i] = $this->buffer(function() {
 							include $this->currentFile;
@@ -409,23 +450,29 @@
 
 					} elseif (is_object($view) && $view instanceof self) {
 						$view->parent                   = $this;
+						$view->head                     = $this->head;
 						$this->components[$element][$i] = $view->make();
 
-						// merge head
-
 					} else {
-
+						throw new Flourish\ProgrammerException(
+							'Invalid component assigned to element %s',
+							$element
+						);
 					}
 				}
 			}
 
-			$this->currentFile = !preg_match(REGEX\ABSOLUTE_PATH, $this->template)
-				? $this->rootDirectory . DS . $this->template . '.' . $this->type . '.php'
-				: $this->template . '.' . $this->type . '.php';
+			$this->setCurrentFile(!
+				preg_match(REGEX\ABSOLUTE_PATH, $this->template)
+					? $this->rootDirectory . DS . $this->template . '.' . $this->type . '.php'
+					: $this->template . '.' . $this->type . '.php'
+			);
 
 			$view = $this->buffer(function() {
 				include $this->currentFile;
 			});
+
+			$this->head = NULL;
 
 			return $view;
 		}
@@ -520,7 +567,7 @@
 		/**
 		 * Repeat the last emitter using a traversable
 		 *
-		 * @a
+		 * @
 		 */
 		public function repeat($traversable)
 		{
@@ -585,8 +632,8 @@
 		{
 			$assets_by_type = array();
 
-			foreach (array_reverse(array_keys($this->assets[$element])) as $file) {
-				foreach ($this->assets[$element][$file] as $asset) {
+			foreach (array_reverse(array_keys($this->assets[$element])) as $level) {
+				foreach ($this->assets[$element][$level] as $asset) {
 					$extension = pathinfo($asset, PATHINFO_EXTENSION);
 
 					if (!isset(self::$extensionMap[$extension])) {
@@ -712,6 +759,16 @@
 					echo implode(PHP_EOL, $list);
 				}
 			}
+		}
+
+
+		/**
+		 *
+		 */
+		private function setCurrentFile($file)
+		{
+			$this->currentFile       = $file;
+			$this->head->currentFile = $file;
 		}
 
 
