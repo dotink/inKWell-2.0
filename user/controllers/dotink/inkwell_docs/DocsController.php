@@ -48,6 +48,17 @@
 			return str_replace('<br />', '', $parser->transform($toc));
 		}
 
+
+		public function missing()
+		{
+			return $this['response'](HTTP\NOT_FOUND, Inkwell\View::create('html', [
+				'staple' => 'dotink/inkwell_docs/404.html'
+			], [
+				'id' => 'not_found'
+			]));
+		}
+
+
 		/**
 		 *
 		 */

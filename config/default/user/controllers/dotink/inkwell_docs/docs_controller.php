@@ -7,6 +7,9 @@
 		'@routing' => [
 			'actions' => [
 				'/[*:path]' => 'Dotink\InkwellDocs\DocsController::show'
+			],
+			'handlers' => [
+				HTTP\NOT_FOUND => 'Dotink\InkwellDocs\DocsController::missing'
 			]
 		],
 

@@ -11,7 +11,7 @@ return Config::create(['Core'], [
 	// Permanent redirects.
 	//
 
-	301 => [
+	HTTP\REDIRECT_PERMANENT => [
 
 	],
 
@@ -19,7 +19,7 @@ return Config::create(['Core'], [
 	// Temporary redirects
 	//
 
-	307 => [
+	HTTP\REDIRECT_TEMPORARY => [
 
 	]
 ]);
@@ -38,7 +38,7 @@ However, redirects because they are processed before other routes are also usefu
 Changing your blog path where you now use the slug as a unique or primary key:
 
 ```php
-301 => [
+HTTP\REDIRECT_PERMANENT => [
 	'/blog/[+:id]-[!:slug]' => '/articles/[slug]'
 ]
 ```
@@ -46,7 +46,7 @@ Changing your blog path where you now use the slug as a unique or primary key:
 CISPA Blackout:
 
 ```php
-302 => [
+HTTP\REDIRECT_TEMPORARY => [
 	'/[*:who_cares]' => 'http://fuckcispa.com/'
 ]
 ```

@@ -46,3 +46,58 @@ php -S localhost:8080 -t <directory/assets>
 ```
 
 Then visiting [http://localhost:8080/system_information](http://localhost:8080/system_information) in your browser.  If everything goes well you should see a standard `phpinfo()` dump, however, do not be fooled -- this is running through inKWell's router.
+
+## Server Setup {#server_setup}
+
+Setting up inKWell on your server is simple.  The assets folder includes an `.htaccess` file which has everything you need for apache.  If you're using PHP-FPM or CGI, the included `.user.ini` file will set the appropriate flags as well.  NGINX users can use the below code as a starting point.
+
+**Note: If you're using apache you will need to ensure mod_rewrite is enabled, as well as `.htaccess` overrides**
+
+### NGINX Config {#nginx_config}
+
+```nginx
+server {
+		listen       80;
+		server_name  <hostname>;
+
+		root         <path_to_inkwell>/assets;
+		index        index.php;
+
+		gzip         on;
+		gzip_disable "MSIE [1-6]\.(?!.*SV1)";
+
+		# Whether or not rewriting is enabled
+
+		set $iw_rewrite_enabled 1;
+
+		# Deny access to .hidden files, if Apache's document root
+		# concurs with nginx's one
+
+		location ~ /\. {
+				deny  all;
+		}
+
+		location / {
+				try_files $uri @inkwell;
+		}
+
+		# BEGIN INKWELL CONFIGURATION
+
+		location @inkwell {
+				if ($iw_rewrite_enabled) {
+						rewrite ^/(.*)$ /index.php?$query_string;
+				}
+		}
+
+		location ~ ^.+\.php {
+				fastcgi_pass         127.0.0.1:9000;
+				fastcgi_index        index.php;
+				fastcgi_read_timeout 300;
+
+				include fastcgi_params;
+
+				fastcgi_param REWRITE_ENABLED  $iw_rewrite_enabled;
+		}
+}
+
+```

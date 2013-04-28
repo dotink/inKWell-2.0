@@ -9,9 +9,19 @@ body {
 	border: solid 1px #ddd;
 }
 
+#not_found
 #homepage,
 #doc {
 	width: 85%;
+}
+
+#doc {
+	max-width: 1280px;
+}
+
+#not_found {
+	max-width: 1024px;
+	text-align: center;
 }
 
 #homepage .brochure {
@@ -156,15 +166,4 @@ a:visited,
 a:hover,
 a:active {
 	color: #4F7A3F;
-}
-
-blockquote {
-	padding: 1em;
-	border-left: solid 3px #932185;
-	background-color: #fafafa;
-	margin-bottom: 2em;
-}
-
-blockquote p:last-child {
-	margin-bottom: 0;
 }
