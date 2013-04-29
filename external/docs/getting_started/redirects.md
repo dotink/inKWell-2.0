@@ -1,4 +1,4 @@
-In addition to routes which call actions, there is another type of routing which can be done: redirects.  Redirects work exactly the same as routes although instead of pointing to a callable action, they point to the replacement URL.
+In addition to routes which call actions, there is another type of routing which can be done: redirects.  Redirects work exactly the same as routes although instead of pointing to a callable action, they point to the replacement URL, or, "target route" as we call it.
 
 ## Configuration
 
@@ -53,7 +53,7 @@ HTTP\REDIRECT_TEMPORARY => [
 
 ### Conditional Redirects {#conditional_redirects}
 
-If you need to redirect only under certain conditions you should not be using the configuration, but rather redirecting from within route actions using the `request` element from the router context.
+If you need to redirect only under certain conditions you should not be using the redirects configuration, but rather calling the `redirect()` methodr on the `request` element of the router context from within your actions.
 
 Inside a controller:
 
@@ -67,7 +67,7 @@ For non-controller actions (anonymous functions or other standard callbacks) it 
 $context['request']->redirect('http://example.com', HTTP\REDIRECT_TEMPORARY);
 ```
 
-**Note: The default redirect status using this method is an HTTP 303 or HTTP\REDIRECT_SEE_OTHER.  This is the most common use case for in-action redirects.**
+**Note: The default redirect status using this method is an HTTP 303 or HTTP\REDIRECT_SEE_OTHER, so make sure if you are performing permanent or temporary redirects from within an action to specify the redirect type.**
 
 
 

@@ -1,8 +1,8 @@
-As we already mentioned in the [routing documentation](./routing), controller methods are the most advanced actions you can point a route to.  They provide a number of methods which assist you with controlling the request and also cleanly wrapping the router context.
+As we already mentioned in the [routing documentation](./routing), controller methods are the most advanced actions a route can execute.  Controllers provide additional methods for modifying the request flow and free up the reception of the router context so your method arguments can be used for other purposes.
 
 ## Creating a Controller
 
-Controllers can exist in whatever namespace you'd like, but there's a few namespaces we definitely suggest you alias.  The most basic and stripped down controller class will look something like this:
+Controllers can exist in whatever namespace you'd like, but there's a few namespaces you will most likely want to alias.  A basic and stripped down controller class will look something like this:
 
 ```php
 <?php namespace Vendor\Project
@@ -19,11 +19,13 @@ Controllers can exist in whatever namespace you'd like, but there's a few namesp
 
 ### Controller Root Directory {#root_directory}
 
-Any controller class which ends with `Controller` (e.g. `CustomController`) will have an attempt made by the inKWell autoloader to be loaded from the controller root.  The default controller root is in `user/controllers` and uses the [inKWell autoloading standard](#).  This means that the namespace is first "underscorized" into a path before loading.  So a controller whose fully qualified class name is `Vendor\MyProject\HomeController` will attempt to autload from `user/controllers/vendor/my_project/HomeController.php`
+The controller class in inKWell provides autoloader matching for any class which ends in 'Controller' (e.g. `CustomController`).  Using this convention you can store controllers in the configured root directory (`user/controllers` by default) in subdirectories matching the [inKWell autoloading standard](extending/auto_loading).
+
+This means that the namespace is first "underscorized" into a path before loading.  So a controller whose fully qualified class name is `Vendor\MyProject\HomeController` will attempt to autoload from `user/controllers/vendor/my_project/HomeController.php`
 
 ### Adding actions {#adding_actions}
 
-Each public method represents a routable action.  For security purposes methods beginning with `__` such as the magic methods `__get()` and `__set()` are not allowed.  We can add an action simply:
+Each public method represents a routable action.  For security purposes methods beginning with `__` such as the magic methods `__get()` and `__set()` are not allowed.  All other public methods, however, are fair game.
 
 ```php
 class MyController extends Inkwell\Controller
@@ -50,7 +52,7 @@ class MyController extends Inkwell\Controller
 
 ## Accessing the Router Context {#router_context}
 
-One thing to note is that the `__construct()` method on a controller cannot be overloaded.  Controller's use .inK's `container-trait` to store the router context.  The router context for other actions is passed directly to the method, however, for a controller the context is stored directly on the class and accessible via `ArrayAccess`.
+The `__construct()` method on the parent controller class is `final`.  Controllers us .inK's [container-trait](http://www.github.com/dotink/container-trait) to store the router context.  This means that elements in the router context can be accessed directly on the object.
 
 ```php
 public function show()
@@ -67,8 +69,7 @@ public function show()
 	$response = $this['response'];
 }
 ```
-
-This allows us to call methods directly on any of these key components:
+Although the above example shows us additionally assigning these components to variables within the action, this is for explanation purposes only.  You can call methods directly on the elements using the array notation.
 
 ```php
 $this['request']->redirect('http://laravel.com', HTTP\REDIRECT_PERMANENT);
@@ -81,16 +82,16 @@ The examples below can be done inside the context of any controller action and a
 ### Allow Methods {#allow_methods}
 
 ```php
-$this->allowMethods('GET', 'POST');
+$this->allowMethods(HTTP\GET, HTTP\POST);
 ```
 
-This will also return the current method:
+This will also return the current method in the event you need to check it's value futher down in the controller logic.
 
 ```php
-$current_method = $this->allowMethods('GET', 'POST');
+$current_method = $this->allowMethods(HTTP\GET, HTTP\POST);
 ```
 
-The above method will trigger an `HTTP\NOT_ALLOWED` error response automatically and immediately if the request method is not on the list.
+If the current request method is not in the list of allowed methods you supplied as arguments, this method will automatically modify the current response to `HTTP\NOT_ALLOWED`.  Additionally, it will set and appropriate `Allow` header and trigger a `YieldException` so that the router returns the response immediately.
 
 ### Checking the Entry Controller and Action {#checking_entry_actions}
 
@@ -102,29 +103,40 @@ if ($this->checkEntryAction('show')) {
 }
 ```
 
-You can also provide a class to check other controllers:
+You can also provide an explicit class if you're checking whether a method on another controller is the entry point.
 
 ```php
-if ($this->checkEntry(__NAMESPACE__ . '\OtherController', 'show')) {
+if ($this->checkEntry(__NAMESPACE__ . '\OtherController', 'list')) {
 	...
 }
 ```
 
 ### Triggering Errors {#triggering_errors}
 
+You can trigger an error response at any time during execution to immediately stop the execution of the action and send the appropriate error response.
+
 ```php
 $this->triggerError(HTTP\NOT_AUTHORIZED);
 ```
 
-Or add a custom message/view
+Or add a custom message/view:
 
 ```php
 $this->triggerError(HTTP\NOT_AUTHORIZED, 'Stop Hacking!');
 ```
 
+### Executing Requests (Future)
+
+```php
+$this->exec('http://www.google.com', new Request(HTTP\GET, 'text/html', [
+	'q' => 'best php mvc framework'
+]));
+```
+
+
 ## Outputting {#outputting}
 
-The recommended method for getting a controller to output to the screen is to use the return value of the action.
+The recommended method for getting content in the response body is to return the content or view object from the controller.
 
 ```php
 public function show()
@@ -133,18 +145,7 @@ public function show()
 }
 ```
 
-However, inKWell also allows another method, simple echoing.  Despite that the return value is the recommended method, if your controller action produces any output while running, this output will be chosen **in place of** the return value.  In both cases, for simple actions inKWell will send either a 404 (The default response) or a 200 (if you provide output).
-
-```php
-public function show()
-{
-	//
-	// This will result in a 404
-	//
-
-	return NULL;
-}
-```
+However, in some cases you may wish to make your controllers output information using `echo` or `include`.  As such, any output from a controller action is buffered and used as the response body *in place of* a return value if it occurs.
 
 ```php
 public function show()
@@ -159,17 +160,28 @@ public function show()
 }
 ```
 
-### Content-Type, Headers, etc. {#advanced_responses}
+It is also possible to return `NULL` which will result in an `HTTP\NOT_FOUND` response, or an empty string or `FALSE` which will result in an `HTTP\NO_CONTENT` response.
 
-The above method shows a simple way to produce output or errors to the screen.  Although inKWell will attempt to determine the appropriate content types of these types of responses, it is often times better to have full control over content type, various headers, and/or other response parameters.
-
-You can achieve this by manipulating the current response:
+This will result in a 404:
 
 ```php
 public function show()
 {
-	return $this['response'](HTTP\OK, 'text/html', 'Plain text but will be sent as HTML');
+	return NULL;
 }
 ```
 
-To understand the full extent of control provided by responses, [take a look at their documentation](./responses).
+This will result in a 204:
+
+```php
+public function show()
+{
+	return '';
+}
+```
+
+### Content-Type, Headers, etc. {#advanced_responses}
+
+When echoing or returning values as shown above, inKWell will try to determine the content type of your output automatically.  For simple strings, this is usually `text/plain`, however, if you returned the contents of an HTML file it would send the requisite `Content-Type: text/html; charset=utf-8` header.
+
+Despite this behavior, it is often better to have full control over content type, headers, and/or other response parameters.  You can achieve this by [using response objects](./responses).

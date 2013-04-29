@@ -2,8 +2,6 @@ The router in inKWell 2.0 is designed from the ground up to offer improved flexi
 
 ## The Basics {#basics}
 
-The router configuration in broken into two parts in inKWell 2.0.  The first part is the `routing.php` core configuration file where you can define global routes.  The second is the actual router class configuration, which we'll go into more later.
-
 The global routing configuration is in `config/default/routing.php` and should look something like this (stripped of comments and namespace):
 
 ```php
@@ -14,10 +12,11 @@ return Config::create(['Core'], [
 ]);
 ```
 
-If you followed our [installation process](./installing), then you'll note the `/system_information` route here we used to test our install.  You can add routes similarly by simply adding new entries to the `actions` array:
+If you followed our [installation process](./installing), then you'll note the `/system_information` route we used for our initial test.  You can add routes similarly by creating new entries in the `actions` array:
 
 ```php
 'actions' => [
+	'/system_information' => 'phpinfo'
 
 	//
 	// A new route
@@ -29,20 +28,19 @@ If you followed our [installation process](./installing), then you'll note the `
 ]
 ```
 
-### Routes vs. Actions {#routes_vs_actions}
-
-In inKWell routes are defined solely as the external mapping which triggers a specific action.  While it is often the case that a single route will map to a single action, this does not have to be so.  For now, it is easiest to think of the route the URL you're trying to create for your users, and the action as the code with which you plan to execute it.
-
+The keys of the array define the route itself, while the values point to an executable action.
 
 ## Routes {#routes}
 
 Routes in inKWell are a composite of static information, tokens, and additional configuration elements.  For example [redirects](/getting_started/redirects) which are also considered to be a route are contextualized by a response code, however use many of the same concepts we'll see here.
 
+There is also a `'base_url'` key found at the root level of a routing configuration.  For the sake of this getting started guide, we will simply say that this is prepended to all the routes defined in that configuration.
+
 ### Tokens {#tokens}
 
-Tokens are short notation which you stick into parts of your URL segments to signify that you want to parse that information into a request parameter.  Examples include...
+Tokens are short notation which can be placed in a route to match given patterns and parse out variable data.  Tokens in inKWell routes are surrounded by `[]` (square brackets).  Examples include...
 
-A complete segment:
+A complete segment (matches any character that is not a `/`):
 
 ```php
 '/hello/[!:name]' => function($context) {
@@ -56,7 +54,7 @@ An integer greater than 1:
 '/search/tag/[+:page]' => 'ContentsController::searchByTag'
 ```
 
-And the wildcard:
+And the wildcard (matches all remaining characters including `/`):
 
 ```php
 '/blog/[*:path]' => 'BlogController::show'
@@ -64,7 +62,9 @@ And the wildcard:
 
 #### Cues {#token_cues}
 
-The symbol on the left side of the token prior to the colon is called a **cue** in inKWell.  Cue's are built in matches which can be used shorthand for common parsing.  It is also possible to use a completly custom regular expression in place of a cue.
+The symbol on the left side of the token prior to the colon is called a *cue* in inKWell.  Cue's are characters, symbols, or custom regular expressions which define what format of information you want to match in place of the token.  The built-in cues use single characters to readily accomidate the most frequently used matching patterns.
+
+The example below, however, shows a circumstance where you may wish to use a more complete regular expression:
 
 ```php
 '/news/[(breaking|editorials|stories):category]/[+:id]-[!:slug]' => 'ArticlesController::show'
@@ -72,19 +72,19 @@ The symbol on the left side of the token prior to the colon is called a **cue** 
 
 #### Transformations {#token_transformations}
 
-When a token is found in an action, its cue is called a **transformation** and it no longer serves the purpose of matching, but rather of transforming a previous match for placement in the action.
+Tokens can be placed in actions or target routes as well.  Here, the left component of the token, however, is called a *transformation*.  Rather than being for matching purposes, transformations are used to transform the string from the route into another format for placement in the action callback or target route.
 
 ```php
 '/[$:controller]/[$:action]' => '[uc:controller]Controller::[lc::action]'
 ```
 
-The above example would convert an underscore or dash separated string in the `controller` or `action` segments into an UpperCamelCase and lowerCamelCase notation respectively, making the action being called dynamic as well.
+The above example would convert an underscore or dash separated string in the `controller` or `action` segments into an UpperCamelCase and lowerCamelCase notation respectively, making the action to call as dynamic as the route.
 
 ### Quick Reference {#token_reference}
 
-#### Cues Reference {#cue_reference}
+#### Cue Reference {#cue_reference}
 
-| Cue | Description                                       | Example Route
+| Key | Description                                       | Example Route
 |-----|---------------------------------------------------|----------------------------------------
 | !   | Any character except a forward slash `/`          | `/users/[!:username]/friends`
 | #   | Any integer with optional minus sign              | `/graph/[!:slug]/[#:posx]/[#:posy]`
@@ -93,17 +93,17 @@ The above example would convert an underscore or dash separated string in the `c
 | $   | A valid PHP variable, class, or method name       | `/[$:class]/[$:method]`
 | *   | A wildcard for all characters remaining           | `/[!:base_url]/[*:remainder]`
 
-#### Transformations Reference {#transformation_reference}
+#### Transformation Reference {#transformation_reference}
 
-| Cue | Description                                       | Example Target
+| Key | Description                                       | Example Target Action
 |-----|---------------------------------------------------|----------------------------------------
 | uc  | Converts a matching token to UpperCamelCase       | `[uc:class]::get`
-| lc  | Converts a matching token to lowerCamelCase       | `[uc:class]::[lc:method]`
+| lc  | Converts a matching token to lowerCamelCase       | `MyClass::[lc:method]`
 | us  | Converts a matching token to under_score          | `[us:function]`
 
 ## Actions {#actions}
 
-While inKWell 2.0 does not yet support all the action types we have planned, it supports most of the basic ones that you'd need to use to create a useful web app or site:
+While inKWell 2.0 does not yet support all the action types we have planned, it supports everything that 1.0 did and is generally on par with other frameworks.  The various action types are as follows:
 
 - Closures (Anonymous Functions)
 - Standard Callbacks (`Class::method` and `[$object, 'method']`)
@@ -120,8 +120,8 @@ While inKWell 2.0 does not yet support all the action types we have planned, it 
 With context:
 
 ```php
-'/hello' => function($this) {
-	return 'Hello World! Nice to see you at ' . $this['request']->getURL();
+'/hello' => function($context) {
+	return 'Hello World! Nice to see you at ' . $context['request']->getURL();
 }
 ```
 
@@ -157,7 +157,8 @@ class Foo
 
 #### Controllers {#controllers}
 
-Controllers are the most extensively developed classes which use the standard callback format.  Unlike other standard callbacks and closures, controllers free up the parameters on the method itself by taking the context via the `__construct()` method.  This allows for controller methods to be called directly without a formal request.
+Controllers are the most extensively developed classes which use the standard callback format.  Unlike other standard callbacks and closures, controllers free up the parameters on the method itself by taking the context via the `__construct()` method.
+
 
 We highly recommend you check out the [controller page](/getting_started/controllers) to learn more.
 

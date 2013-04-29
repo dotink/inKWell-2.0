@@ -2,15 +2,15 @@ Although it's 100% possible to simply return or echo/output values from inside c
 
 ## Contextual Response {#contextual_response}
 
-Within an inKWell controller or router action, the context contains the default response established by the router.  For purposes of routing, this is an `HTTP\NOT_FOUND` response.
-
-You don't need to create a new response for your action, but can simply modify this one by invoking it (example from in a controller action):
+The router context in inKWell provides the default `HTTP\NOT_FOUND` response to controllers and other router actions when they are executed.  The simplest way to provide a formal response is simply to invoke this from within your action as the return value:
 
 ```php
 return $this['response'](HTTP\OK, 'text/plain', 'I got you a dollar.');
 ```
 
 ## Checking and Getting Response Information {#response_information}
+
+If you need to know about the current state of the response there are a number of methods you can use to check and get various pieces of information.
 
 Checking the status:
 
@@ -38,7 +38,7 @@ $code = $this['response']->getStatus();
 
 ## Setting Headers {#setting_headers}
 
-It is possible to add headers when you invoke a response:
+If you need to set additional or custom headers for your response you can do so also when invoking the response:
 
 ```php
 return $this['response'](
@@ -53,7 +53,7 @@ return $this['response'](
 
 ### One-by-One {#single_header}
 
-In addition to adding them in bulk, you can add them slectively throughout the code and leave the argument out completely:
+You can also add headers more slectively throughout the code and ignore in the invocation.
 
 ```php
 $this['response']->setHeader('X-Custom-Header', 'No idea what this does');
@@ -71,11 +71,18 @@ $this['response']->setHeader('X-Custom-Header', NULL);
 
 ## Rendering {#rendering}
 
-When you invoke or create a new response you inevitably pass it a view of some sorts.  The response class will attempt to render this view down to a string before responding.  If you do not provide an explicit mime-type then it will also cache this view and determine the appropriate mime type before sending it out.
+When you invoke or create a new response you will generally pass it a view of some sorts, whether it be a string, a [view object](./views), or something else.
 
-In order to render views, the response class needs to know the various methods to call on view objects.  This configuration can be found in the `config/default/rendering.php` file and is simply a map of classes to methods.
+The response class will make due attempts to render the view into a string.  If you are working with custom view objects, alternative templating systems, or any other non-standard views, you can add rendering methods to the configuration located in `config/default/rendering.php`.
 
-This allows you to use alternative view classes, templating engines, etc, more readily.
+The `'methods'` key contains a simple list which allows you to map certain object class's to specific methods on the object to complete rendering.
+
+```php
+'methods' => [
+	'Dotink\Inkwell\View'   => 'make',
+	'Dotink\Flourish\Image' => 'output'
+]
+```
 
 ## Caching (Future) {#caching}
 

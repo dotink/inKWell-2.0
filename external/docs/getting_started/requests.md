@@ -1,8 +1,8 @@
-Requests in inKWell are encapsulated HTTP requests.  They are used internally to get information about the request which the user has performed as well as to get request information from other [controllers](./controllers).
+Requests in inKWell are encapsulated HTTP requests.  They are used internally to get information about the request which the user has performed as well as to make requests to other [controllers](./controllers).
 
 ## The Client (User) Request {#client_request}
 
-The client request is constructed early on in the execution cycle and is passed to the router and in turn provided to actions in the context.  Remember that for [controllers](./controllers) the context is accessed on the controller itself:
+The client request is constructed early on in the execution cycle and is passed to the router and in turn provided to actions via the router context.  Remember that for [controllers](./controllers) the router context is accessed on the controller itself:
 
 ```php
 $request = $this['request'];
@@ -16,15 +16,7 @@ While for other [types of actions](./routing#actions) the context is passed as t
 }
 ```
 
-## Internal Requests {#internal_requests}
-
-Internal requests require the construction of a new request object.
-
-```php
-$request = new Inkwell\Request(HTTP\GET, 'text/html', 'http://www.example.com');
-```
-
-The request object itself does not make a request, but simply encapsulates the information about the request for use in controller execution or other objects.
+The `'request'` element for the entry action will be a complete encapsulation of information normally accessed among PHP superglobals like `$_GET` and `$_SERVER` as well as some disparate functions.
 
 ## Working with Request Objects {#working_with_requests}
 

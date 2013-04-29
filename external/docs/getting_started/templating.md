@@ -80,7 +80,7 @@ There are a number of view methods which are designed to facilitate templating. 
 The `each()` method will iterate over array data elements and passes them to a callback defined as the second argument of the method.  This is useful because closures can be used for output.
 
 ```php
-<% $this->each('users', function($user, $i) {
+<% $this->each('users', function($user, $i) { %>
 	<section class="user">
 		<h3><%= e($user->getName()) %></h3>
 		<div class="bio">
