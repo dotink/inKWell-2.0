@@ -31,16 +31,6 @@
 
 
 		/**
-		 * A list of available renderers
-		 *
-		 * @static
-		 * @access private
-		 * @var array
-		 */
-		static private $renderers = array();
-
-
-		/**
 		 * A list of available render methods
 		 *
 		 * @static
@@ -326,14 +316,6 @@
 					$this->type    = strtolower($type);
 					$this->headers = $headers;
 					$this->view    = $view;
-			}
-
-			$this->renderHooks = array();
-
-			foreach (self::$renderers as $type_match => $callback) {
-				if (preg_match('#' . $type_match . '#', $this->type)) {
-						$this->renderHooks[] = $callback;
-				}
 			}
 
 			return $this;
