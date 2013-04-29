@@ -18,11 +18,11 @@
 		// HTTP METHODS
 		//
 
-		'HTTP\GET'    => 'get',
-		'HTTP\POST'   => 'post',
-		'HTTP\PUT'    => 'put',
-		'HTTP\DELETE' => 'delete',
-		'HTTP\HEAD'   => 'head',
+		'HTTP\GET'    => 'GET',
+		'HTTP\POST'   => 'POST',
+		'HTTP\PUT'    => 'PUT',
+		'HTTP\DELETE' => 'DELETE',
+		'HTTP\HEAD'   => 'HEAD',
 
 		//
 		// HTTP RESPONSES

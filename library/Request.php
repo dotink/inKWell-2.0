@@ -399,8 +399,8 @@
 				: 'HTTP/1.1';
 
 			$this->method = !$method
-				? strtolower($_SERVER['REQUEST_METHOD'])
-				: strtolower($method);
+				? strtoupper($_SERVER['REQUEST_METHOD'])
+				: strtoupper($method);
 
 			if ($data == NULL) {
 				if ($this->checkMethod(HTTP\GET)) {
@@ -807,7 +807,7 @@
 		 * number of get parameters as an associative array.  The extraction map allows for type-
 		 * casting parameters and providing default values as you would with the get() method.
 		 *
-		 * extract($request->map([
+		 * extract($request->params([
 		 *    '(string)  query' => NULL,
 		 *    '(integer) page'  => 1
 		 * ]));
@@ -816,7 +816,7 @@
 		 * @param array $extraction_map The map to use
 		 * @return array An associative array of parameter names to request values
 		 */
-		public function map($extraction_map)
+		public function params($extraction_map)
 		{
 			$value_map = [];
 

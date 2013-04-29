@@ -71,12 +71,13 @@
 		protected function allowMethods($allowed_method)
 		{
 			$current_method  = $this['request']->getMethod();
-			$allowed_methods = !is_array($allowed_method)
+			$allowed_methods = array_map('strtoupper', !is_array($allowed_method)
 				? func_get_args()
-				: $allowed_method;
+				: $allowed_method
+			);
 
-			if (!in_array($current_method, array_map('strtolower', $allowed_methods))) {
-				$this['response']->setHeader('Allow', implode(', ', $allowed_methods));
+			if (!in_array($current_method, $allowed_methods)) {
+				$this['response']->setHeader('Allow', $allowed_methods);
 				$this->triggerError(HTTP\NOT_ALLOWED);
 			}
 
@@ -116,26 +117,6 @@
 			}
 
 			return $this['routes']->checkEntryAction($class, $method);
-		}
-
-
-		/**
-		 * Executes a sub request
-		 *
-		 * @access protected
-		 * @return Response
-		 */
-		protected function exec($method, $type, $url, $params)
-		{
-			$url = $this['routes']->compose($url, $params, $params);
-
-			if ($url[0] = '/') {
-				$request_class  = get_class($this['request']);
-				$request        = new $request_class($method, $type, $url, $params);
-				$response       = clone $this['response'];
-
-				return $this['routes']->run($request, $response);
-			}
 		}
 
 
