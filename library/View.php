@@ -169,6 +169,12 @@
 
 
 		/**
+		 *
+		 */
+		private $parent = NULL;
+
+
+		/**
 		 * The root directory for this view element's templates
 		 *
 		 * @access private
@@ -194,6 +200,8 @@
 		 */
 		private $type = NULL;
 
+
+		private $views = array();
 
 		/**
 		 * Initialize the class
@@ -272,7 +280,9 @@
 		public function __construct($view, $root = NULL)
 		{
 			if (is_object($view) && $view instanceof self) {
-				$this->type  =  $view->type;
+				$this->parent = $view;
+				$this->head   = $this;
+				$this->type   = $this->parent->type;
 
 			} else {
 				if (count($file_parts = explode('.', $view)) != 2) {
@@ -310,6 +320,7 @@
 			foreach ($components as $element => $view) {
 				if (isset($this->components[$element])) {
 					unset($this->components[$element]);
+					unset($this->views[$element]);
 				}
 
 				$this->add($element, $view);
@@ -326,23 +337,19 @@
 		 */
 		public function add($element, $view)
 		{
-			if (isset($this->components[$element])) {
-				if (is_array($view)) {
-					$this->components[$element] = array_merge(
-						$this->components[$element],
-						$view
-					);
+			if (!isset($this->components[$element])) {
+				$this->components[$element] = array();
+				$this->views[$element]      = array();
+			}
 
-				} else {
-					$this->components[$element][] = $view;
-				}
+			if (is_array($view)) {
+				$this->components[$element] = array_merge(
+					$this->components[$element],
+					$view
+				);
 
 			} else {
-				if (is_array($view)) {
-					$this->components[$element] = $view;
-				} else {
-					$this->components[$element] = [$view];
-				}
+				$this->components[$element][] = $view;
 			}
 		}
 
@@ -419,18 +426,8 @@
 		}
 
 
-		/**
-		 * Compiles this view
-		 *
-		 * @access public
-		 * @return string The view compiled to a string
-		 */
-		public function make($level = 0)
+		public function compile()
 		{
-			if (!$this->head) {
-				$this->head = new self($this);
-			}
-
 			if (!isset($this->rootDirectory) && isset($this->parent)) {
 				$this->rootDirectory = $this->parent->rootDirectory;
 			}
@@ -444,14 +441,14 @@
 								: $view
 						);
 
-						$this->components[$element][$i] = $this->buffer(function() {
+						$this->views[$element][$i] = $this->buffer(function() {
 							include $this->currentFile;
 						});
 
 					} elseif (is_object($view) && $view instanceof self) {
-						$view->parent                   = $this;
-						$view->head                     = $this->head;
-						$this->components[$element][$i] = $view->make();
+						$view->parent              = $this;
+						$view->head                = $this->head;
+						$this->views[$element][$i] = $view->make();
 
 					} else {
 						throw new Flourish\ProgrammerException(
@@ -460,6 +457,27 @@
 						);
 					}
 				}
+			}
+		}
+
+
+		/**
+		 * Compiles this view
+		 *
+		 * @access public
+		 * @return string The view compiled to a string
+		 */
+		public function make()
+		{
+			if (!$this->head) {
+				$this->head = new self($this);
+			}
+
+
+			$this->compile();
+
+			if (!$this->parent) {
+				$this->head->compile();
 			}
 
 			$this->setCurrentFile(!
@@ -632,8 +650,8 @@
 		{
 			$assets_by_type = array();
 
-			foreach (array_reverse(array_keys($this->assets[$element])) as $level) {
-				foreach ($this->assets[$element][$level] as $asset) {
+			foreach (array_reverse(array_keys($this->assets[$element])) as $file) {
+				foreach ($this->assets[$element][$file] as $asset) {
 					$extension = pathinfo($asset, PATHINFO_EXTENSION);
 
 					if (!isset(self::$extensionMap[$extension])) {
@@ -754,10 +772,8 @@
 
 			}
 
-			if (isset($this->components[$element])) {
-				foreach ($this->components as $list) {
-					echo implode(PHP_EOL, $list);
-				}
+			if (isset($this->views[$element])) {
+				echo implode(PHP_EOL, $this->views[$element]);
 			}
 		}
 
