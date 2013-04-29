@@ -4,8 +4,6 @@
 	 * @author Matthew J. Sahagian [mjs] <msahagian@dotink.org>
 	 */
 
-	$this->head->asset('common', 'http://dotink.github.io/inKLing/theme.css');
-	$this->head->asset('common', 'styles/dotink/inkwell_docs/main.css');
 	$this->head->push('title', 'A PHP Framework for PHP Developers');
 
 	%>

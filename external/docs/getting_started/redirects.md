@@ -51,4 +51,23 @@ HTTP\REDIRECT_TEMPORARY => [
 ]
 ```
 
+### Conditional Redirects {#conditional_redirects}
+
+If you need to redirect only under certain conditions you should not be using the configuration, but rather redirecting from within route actions using the `request` element from the router context.
+
+Inside a controller:
+
+```php
+$this['request']->redirect('http://example.com', HTTP\REDIRECT_TEMPORARY);
+```
+
+For non-controller actions (anonymous functions or other standard callbacks) it will depend on the name you receive the router context as.  For most examples across this site:
+
+```php
+$context['request']->redirect('http://example.com', HTTP\REDIRECT_TEMPORARY);
+```
+
+**Note: The default redirect status using this method is an HTTP 303 or HTTP\REDIRECT_SEE_OTHER.  This is the most common use case for in-action redirects.**
+
+
 

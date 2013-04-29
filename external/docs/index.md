@@ -9,7 +9,7 @@
 - [Requests](/getting_started/requests)
 - [Responses](/getting_started/responses)
 - [Views](/getting_started/views)
-- [Working with Assets](/getting_started/working_with_assets)
+- [Templating](/getting_started/templating)
 
 ##### There's a Lot You Can Do Under the Hood.
 

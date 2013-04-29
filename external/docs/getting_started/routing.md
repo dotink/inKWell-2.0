@@ -161,6 +161,6 @@ Controllers are the most extensively developed classes which use the standard ca
 
 We highly recommend you check out the [controller page](/getting_started/controllers) to learn more.
 
-### 0-Argument Functions
+### 0-Argument Functions {#functions}
 
-
+Last, but not least, it is possible to simply specify a function which takes no arguments.  These are useful for routers which point to informational endpoints such as the default configured `'/system_information'` route which uses the internal function `phpinfo` for an action.

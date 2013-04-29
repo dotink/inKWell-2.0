@@ -4,13 +4,11 @@ The `View` class in inKWell uses PHP templates not only for speed but also for p
 
 There's a tendency in the PHP MVC world to consider views to be solely templates, while we disagree with this approach, we'll leave the argument to the blogs and simply state that views are comprised of two parts in inKWell: the view object (which we will consider the view itself) and the view template.
 
-## Template Resolution {#template_resolution}
-
 View templates in inKWell should always follow the format of `<name>.<type>.<php>`.  Neither the `type` extension nor the `php` extension are optional.
 
 ## Creating a New View {#creating_a_view}
 
-There are several ways to approach view creation, but for the sake of simplicity, here are some common things you'll see and a quick explanation of each.
+You can create a new main view simply by passing the type.
 
 ```php
 View::create('html');
@@ -18,26 +16,35 @@ View::create('html');
 
 The above will create a view whose template is `main.html.php` in the configured default view root directory.
 
-```php
-View::create('users/show.html')
-```
-
-This example would use the template `users/show.html.php`, however, will have a `NULL` root directory.  Views with a `NULL` root directory when compiled will use one of the following:
-
-- The root directory of their parent view (if they have a parent)
-- The current working directory (if they have no parent)
-
 ### Seeding Components {#seeding_components}
 
-Using the above two examples, we can see how this makes a lot more sense when they are combined to form a single view:
+You can add additional sub-components to a view by adding an associative array as the second argument.  The key will be used to place the component inside the main view, and the value points to the template to be placed.
 
 ```php
-View::create('html', [
-	'staple' => View::create('users/show.html')
+Inkwell\View::create('html', [
+	'staple' => 'users/show.html'
 ]);
 ```
 
-The second argument to view create shown above, an associative array, is a list of component assignments for the `main.html.php` view template.  If we look at this template we will see where the `'staple'` component gets placed:
+### Seeding Data {#seeding_data}
+
+A third argument to the `create()` method allows us to seed our view with data.  Using the examples as shown, all data and components will be shared across all the components.
+
+```php
+$view = Inkwell\View::create('html', [
+	'staple' => 'users/show.html'
+], [
+	'id'    => 'view_user',
+	'title' => 'Hello World!'
+	'user'  => $user
+]);
+```
+
+The `user` element in the data array can then be operated on in the `users/show.html.php` template while the `id` is used in the `main.html.php` template.
+
+## Basic Templating {#basic_templating}
+
+The view templates are included by the view object, so within their scope `$this` will always point to the view object which added them.  Let's examine a stripped down `main.html.php` template to get an idea on how we work with components and data within the template.
 
 ```php
 <% namespace Dotink\Inkwell\View\HTML {
@@ -46,24 +53,17 @@ The second argument to view create shown above, an associative array, is a list 
 	 * @author Matthew J. Sahagian [mjs] <msahagian@dotink.org>
 	 */
 
-	$this->head->asset('common', 'http://dotink.github.io/inKLing/inkling.css');
-
 	%>
 	<!doctype html>
 	<html>
 		<head>
-			<title><%= $this->head->join('title', '::', TRUE) %></title>
+			<title><%= $this['title'] :? 'No Title' %></title>
 
 			<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-
-			<% $this->head->place('common') %>
-
 		</head>
 		<body id="<%= $this['id'] ?: 'page' %>">
 
-			<% $this->place('header') %>
 			<% $this->place('staple') %>
-			<% $this->place('footer') %>
 
 		</body>
 	</html>
@@ -71,27 +71,62 @@ The second argument to view create shown above, an associative array, is a list 
 }
 ```
 
-### Seeding Data {#seeding_data}
+### Placing Components {#placing_components}
 
-In addition to the components which you can see being placed (`place()`) in the main HTML view above, you will also note the use of the view as an array such as `$this['id']`.  This is how you access the view data inside the template.  Data, similar to components, can be added when creating the view:
+We're able to place our component using the name associated with it when we seeded it and the `place()` method.
 
 ```php
-$view = View::create('html', [
-	'staple' => View::create('users/show.html')
+<% $this->place('staple') %>
+```
+
+### Accessing Data {#accessing_data}
+
+Using `$this` as an array allows us to access our data:
+
+```php
+<%= $this['id'] ?: 'page' %>
+```
+
+If the data is not available, `NULL` will be returned instead.  You can use the compact ternary operate `?:` to establish a default in the event the data is missing.
+
+## Embedding Views for Data Encapsulation {#embedded_views}
+
+Each view object has its own set of components and data. So if you need to isolate data between two views you can embed another view object as a component.  The example below would mean that the main view would not be able to access the user data.
+
+```php
+$view = Inkwell\View::create('html', [
+	'staple' => Inkwell\View::create('users/show.html', [], [
+		'user' => $user
+	])
 ], [
-	'id' => 'view_user'
+	'id'   => 'view_user'
 ]);
 ```
 
-## Data Encapsulation {#data_encapsulation}
+**Note: The embedded view will have the same root directory as its parent.**
 
-Each view object has it's own set of components and data.  Respectively, if you're placing a component or accessing data in a template loaded in a view which is a component of another view, the components and data are separate.  If the view template needs to access the same data, you can assign it directly to a component:
+### Accessing the Parent {#accessing_the_parent}
+
+Although the above example shows how we can encapsulate the user data, there are some circumstances where the component's template may need to access more general information from the parent.  This can be done within by using the `parent` property.
 
 ```php
-$view = View::create('html', [
-	'staple' => 'users/show.html'
-], [
-	'id' => 'view_user'
-]);
+The parent's value for id is: <%= $this->parent['id'] %>
 ```
+
+### The Head View {#the_head_view}
+
+If you have multiple levels of embedded views you may also need to propagate data all the way to the top.  The `head` property is a special view which is common across the main view and all component templates regardless of how deeply they are embedded.  This is most commonly used (in HTML at least) to allow every level of embedded components to add scripts or styles to the `<head>` element, however, it can also be used for data.
+
+```php
+<% $this->head->push('title', 'My Title') %>
+```
+
+**Note: The head property is only available during compilation, so it is only available inside templates, i.e. you cannot work with the head from inside a controller.**
+
+## Helpers, Assets, and More {#helpers_assets_more}
+
+For more information about extended functionality inside view template including using helpers, adding assets, and additional view methods, check out the [templating documentation](./templating).
+
+
+
 

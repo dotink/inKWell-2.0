@@ -90,7 +90,9 @@
 			}
 
 			return Inkwell\View::create('html', [
-				'staple' => 'dotink/inkwell_docs/' . $id . '.html'
+				'header' => 'dotink/inkwell_docs/header.html',
+				'staple' => 'dotink/inkwell_docs/' . $id . '.html',
+				'footer' => 'dotink/inkwell_docs/footer.html'
 			], [
 				'id'    => $id,
 				'doc'   => $doc,
