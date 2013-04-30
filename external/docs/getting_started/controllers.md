@@ -19,9 +19,12 @@ Controllers can exist in whatever namespace you'd like, but there's a few namesp
 
 ### Controller Root Directory {#root_directory}
 
-The controller class in inKWell provides autoloader matching for any class which ends in 'Controller' (e.g. `CustomController`).  Using this convention you can store controllers in the configured root directory (`user/controllers` by default) in subdirectories matching the [inKWell autoloading standard](extending/auto_loading).
+The controllers in inKWell are stored under the `user/controllers` directory by default.  This root directory is configurable in the `config/default/library/controller.php` file.  The directory structure within the controller root directory is based on the IW loading standard which is similar to PSR-0 with the following differences:
 
-This means that the namespace is first "underscorized" into a path before loading.  So a controller whose fully qualified class name is `Vendor\MyProject\HomeController` will attempt to autoload from `user/controllers/vendor/my_project/HomeController.php`
+- Underscores are not converted to directory separators
+- Any class ending with `Exception` wil be loaded from an 'Exceptions' sub-folder.
+- Any class ending with `Interface` will be loaded from an 'Interfaces' sub-folder.
+- Any class ending with `Trait` will be loaded from a 'Traits' sub-folder.
 
 ### Adding actions {#adding_actions}
 

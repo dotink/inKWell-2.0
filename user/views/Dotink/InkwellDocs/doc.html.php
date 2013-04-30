@@ -9,7 +9,7 @@
 
 	 $this->head->asset('toc', 'scripts/dotink/toc_sex.js');
 
-	 $this->head->add('common', 'dotink/inkwell_docs/doc_head.html');
+	 $this->head->add('common', 'Dotink/InkwellDocs/doc_head.html');
 
 	 $this->head->push('title', $this['title']);
 

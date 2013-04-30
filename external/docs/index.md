@@ -13,8 +13,8 @@
 
 ##### There's a Lot You Can Do Under the Hood.
 
-- [Modular Configuration and Types](extending/configuration_types)
-- [Multiple App Environments](extending/multiple_environments)
+- [Modular Configuration and Typecasting](extending/modular_configuration)
+- [Multiple Application Environments](extending/multiple_environments)
 - [Directory Structure](extending/directory_structure)
 - [The Inkwell Interface](extending/inkwell_interface)
 - [Setting Up Asset Filters](extending/asset_filters)

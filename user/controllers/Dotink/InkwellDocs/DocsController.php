@@ -52,7 +52,7 @@
 		public function missing()
 		{
 			return $this['response'](HTTP\NOT_FOUND, Inkwell\View::create('html', [
-				'staple' => 'dotink/inkwell_docs/404.html'
+				'staple' => 'Dotink/InkwellDocs/404.html'
 			], [
 				'id' => 'not_found'
 			]));
@@ -90,9 +90,9 @@
 			}
 
 			return Inkwell\View::create('html', [
-				'header' => 'dotink/inkwell_docs/header.html',
-				'staple' => 'dotink/inkwell_docs/' . $id . '.html',
-				'footer' => 'dotink/inkwell_docs/footer.html'
+				'header' => 'Dotink/InkwellDocs/header.html',
+				'staple' => 'Dotink/InkwellDocs/' . $id . '.html',
+				'footer' => 'Dotink/InkwellDocs/footer.html'
 			], [
 				'id'    => $id,
 				'doc'   => $doc,
