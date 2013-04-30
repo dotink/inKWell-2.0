@@ -39,11 +39,15 @@ It is possible to add assets to [the head](./views#the_head_view), view object, 
 }
 ```
 
-### Asset Combination {#asset_combination}
+### Asset Combination and Preprocessing {#asset_combination}
 
-Assets of the same type will be combined based on the first argument to the `asset()` method.  If you add multiple javascript assets to the `'common'` element, they will be concatenated, cached, and served as a single javascript file; thereby reducing the number of HTTP requests.
+Assets of the same type are combined and pre-processed by default.  That is, if you add multiple javascript assets to the `'common'` element (or any other element you create), they will be concatenated, cached, and served as a single javascript file; thereby reducing the number of HTTP requests.  To disable combination and preprocessing of assets simply add a `FALSE` argument when they are placed:
 
-If you need combine assets differently, you can add a component to the head view which will in turn group assets accordingly:
+```php
+$this->place('forums', FALSE);
+```
+
+Assets can be grouped differently by creating different templates and adding them to a pre-existing element being placed.  The example below shows how we can group our `'forums'` assets and use a custom head template which is attached to the `'common'` element.  This allows you to disable combining or pre-processing on certain elements.
 
 ```php
 <% namespace Dotink\Ikwell\View\HTML
@@ -67,9 +71,15 @@ Then within the `dotink/forums/head.html.php` file:
 ```php
 <% namespace Dotink\Ikwell\View\HTML
 {
-	$this->place('forums');
+	//
+	// The previously set javascript assets will not be combined or pre-processed.
+	//
+
+	$this->place('forums', FALSE);
 }
 ```
+
+You may wish to do this if you're using a public CDN and there is a high liklihood your visitors will have common scripts or CSS already cached.
 
 ## Additional View Methods {#additional_view_methods}
 
