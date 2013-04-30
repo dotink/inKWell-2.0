@@ -723,7 +723,7 @@
 		/**
 		 *
 		 */
-		private function place($element, $preprocess = FALSE)
+		private function place($element, $preprocess = TRUE)
 		{
 			//
 			// Cycle through assets under this name
