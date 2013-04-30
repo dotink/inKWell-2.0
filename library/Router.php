@@ -532,7 +532,10 @@
 
 				} else {
 					$this->controller = new $action[0]($context);
-					$action_response  = $this->controller->$action[1]();
+
+					$this->emit('createController', $this->controller);
+
+					$action_response = $this->controller->$action[1]();
 				}
 
 			} else {

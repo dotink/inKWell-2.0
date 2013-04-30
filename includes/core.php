@@ -116,10 +116,19 @@
 			$class = ltrim($class, '\\');
 			$parts = explode('\\', $class);
 			$class = array_pop($parts);
-			$path  = implode(DS, $parts);
-			$path  = App\Text::create($path)->underscorize();
 
-			return $path . DS . $class . '.php';
+			if (preg_match('#(.*)Exception$#', $class)) {
+				$parts[] = 'Exceptions';
+			} elseif (preg_match('#(.*)Interface$#', $class)) {
+				$parts[] = 'Interfaces';
+			} elseif (preg_match('#(.*)Trait$#', $class)) {
+				$parts[] = 'Traits';
+			}
+
+			$parts[] = $class;
+			$path    = implode(DS, $parts);
+
+			return $path . '.php';
 		}
 
 
@@ -248,29 +257,6 @@
 
 
 		/**
-		 * Alias a class in the magic namespace to another fully qualified class
-		 *
-		 * Unlike using class_alias() in the system, this method will place the actual aliasing
-		 * within the autoloading logic which allows for aliases themselves to be lazy.
-		 *
-		 * @access public
-		 * @param string|array $alias The class alias to use or an array of aliases to classes
-		 * @param string $class The class to alias to
-		 * @return void
-		 */
-		public function alias($alias, $class = NULL)
-		{
-			if (func_num_args() == 1 && is_array($alias)) {
-				foreach ($alias as $alias => $class) {
-					$this->aliases[self::MAGIC_NAMESPACE . '\\' . $alias] = $class;
-				}
-			} else {
-				$this->aliases[self::MAGIC_NAMESPACE .  '\\' . $alias] = $class;
-			}
-		}
-
-
-		/**
 		 * Checks whether or not the app is in a certain execution mode
 		 *
 		 * @access public
@@ -360,18 +346,19 @@
 		 * Configure our application
 		 *
 		 * @access public
-		 * @param string $config_name The name of the config to use, default NULL (Config default)
-		 * @param string $config_root The configuration root
+		 * @param string $configuration_name The name of the config to use, NULL is default
+		 * @param string $configuration_root_dir The configuration root directory
 		 * @return IW The application for chaining
 		 */
-		public function config($config_name = NULL, $config_root = NULL)
+		public function config($configuration_name = NULL, $configuration_root_dir = NULL)
 		{
-			$config_root = $config_root ?: $this->getRoot() . DS . self::DEFAULT_CONFIG_DIRECTORY;
-			$config      = $this->create('config', [self::CONFIG_INTERFACE]);
+			$this->children['config'] = $this->create('config', [self::CONFIG_INTERFACE]);
+			$configuration_root_dir   = $configuration_root_dir ?: self::DEFAULT_CONFIG_DIRECTORY;
 
-			$config->load($config_root, $config_name);
+			$this->addRoot('config', $configuration_root_dir);
+			$this->children['config']->load($this->getRoot('config'), $configuration_name);
 
-			$this->addRoot('config', $config_root);
+			$config = $this->children['config'];
 
 			//
 			// Set up our libraries.
@@ -419,12 +406,22 @@
 				$this->loaders = array_merge($this->loaders, $autoloading_config['map']);
 			}
 
+
 			//
-			// Assign our configuration object to a child, and swap it for some data
+			// From this point forward we only need the inkwell root config
 			//
 
-			$this->children['config'] = $config;
-			$config                   = $this['config']->get('array', '@inkwell');
+			$config = $this['config']->get('array', '@inkwell');
+
+			//
+			// Set up Aliases
+			//
+
+			if (isset($config['aliases'])) {
+				foreach ($config['aliases'] as $alias => $class) {
+					$this->aliases[self::MAGIC_NAMESPACE .  '\\' . $alias] = $class;
+				}
+			}
 
 			//
 			// Initialize Date and Time Information, this has to be before any
