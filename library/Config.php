@@ -70,14 +70,15 @@
 		 *
 		 * @static
 		 * @access public
-		 * @param string $type The configuration type
+		 * @param array $types The configuration types
 		 * @param array $data The configuration data
 		 * @return array $data The configuration data
 		 */
-		static public function create($types, Array $data = NULL)
+		static public function create(Array $types, Array $data = NULL)
 		{
-			if (!is_array($types)) {
-				$types = array($types);
+			if (func_num_args() == 1) {
+				$data  = func_get_arg(0);
+				$types = array();
 			}
 
 			array_map('strtolower', $types);
@@ -95,10 +96,10 @@
 		 */
 		static private function generateElementId($path)
 		{
-			$path = str_replace(DS, '/', $path);
-			$path = new App\Text($path);
+			$path = str_replace('_', '', $path);
+			$path = strtolower($path);
 
-			return md5($path->underscorize());
+			return md5($path);
 		}
 
 		/**
