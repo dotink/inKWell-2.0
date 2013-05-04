@@ -76,30 +76,12 @@
 
 
 		/**
-		 * The status of the response, ex: 'ok'
-		 *
-		 * @access private
-		 * @var string
-		 */
-		private $status = NULL;
-
-
-		/**
 		 * The code of the response, ex: 200
 		 *
 		 * @access private
 		 * @var integer
 		 */
 		private $code = NULL;
-
-
-		/**
-		 * The content/mime type of the response, ex: 'text/html'
-		 *
-		 * @access private
-		 * @var string
-		 */
-		private $type = NULL;
 
 
 		/**
@@ -112,12 +94,66 @@
 
 
 		/**
+		 * The language for this response
+		 *
+		 * @access private
+		 * @var string
+		 */
+		private $lang = NULL;
+
+
+		/**
+		 * The method for this response
+		 *
+		 * @access private
+		 * @var string
+		 */
+		private $method = NULL;
+
+
+		/**
 		 * The render hooks which will be applied to the view on sending
 		 *
 		 * @access private
 		 * @var array
 		 */
 		private $renderHooks = array();
+
+
+		/**
+		 * The request for which this response is created
+		 *
+		 * @access private
+		 * @var array
+		 */
+		private $request = NULL;
+
+
+		/**
+		 * The status of the response, ex: 'ok'
+		 *
+		 * @access private
+		 * @var string
+		 */
+		private $status = NULL;
+
+
+		/**
+		 * The content/mime type of the response, ex: 'text/html'
+		 *
+		 * @access private
+		 * @var string
+		 */
+		private $type = NULL;
+
+
+		/**
+		 * The URL which requested this response
+		 *
+		 * @access private
+		 * @var Object A url object
+		 */
+		private $url = NULL;
 
 
 		/**
@@ -209,7 +245,7 @@
 		 * @param string $entropy_data A string to calculate entropy from, default NULL
 		 * @param string $max_entropy The maximum amount of entropy allowed, default 0
 		 */
-		static public function sendCache($type, $max_age = 120, $entropy = NULL, $max_entropy = 0)
+		static public function sendCached()
 		{
 			return;
 		}
@@ -242,40 +278,30 @@
 
 
 		/**
-		 * Caches a file for the current unique URL using the data type as part of its id.
+		 * Generates or validates an etag in apc cache
 		 *
 		 * @static
 		 * @access private
-		 * @param string $data_type The data type for the request to match the cache
-		 * @param string $data The data to cache
+		 * @param string $cache_id The cache id for the resource
+		 * @param string $etag The etag for the resource
+		 * @param boolean $validate Whether or not we should just validate
+		 * @return boolean TRUE if validating and the etag matches, FALSE otherwise
 		 */
-		static private function cache($data_type, $data)
+		static private function etag($cache_id, $etag, $validate = FALSE)
 		{
-			if (!$data_type) {
-				$data_type = 'text/plain';
+			if (extension_loaded('apc') && ini_get('apc.enabled')) {
+				$key = __CLASS__ . '::ETAGS::' . $cache_id;
+
+				if ($validate) {
+					return (apc_fetch($key) == $etag);
+				} else {
+					apc_store($key, $etag);
+				}
 			}
 
-			$url        = new Flourish\URL;
-			$cache_id   = md5($url->getPathWithQuery() . $data_type);
-			$cache_file = new Flourish\File(self::$cacheDirectory . DS . $cache_id . '.txt');
-
-			if (!$cache_file->exists() || $cache_file->read() != $data) {
-				$cache_file->write($data);
-			}
-
-			return $cache_file;
+			return FALSE;
 		}
 
-		/**
-		 * Constructs a new response
-		 *
-		 * @access public
-		 * @return void
-		 */
-		public function __construct($status = NULL, $type = NULL, $headers = array(), $view = NULL)
-		{
-			$this($status, $type, $headers, $view);
-		}
 
 		/**
 		 * Creates or recreates the object with information other than the defaults
@@ -323,7 +349,7 @@
 
 
 		/**
-		 * Gets the status set on the response
+		 * Checks the code on the response
 		 *
 		 *
 		 */
@@ -338,7 +364,7 @@
 
 
 		/**
-		 * Gets the status set on the response
+		 * Checks the status on a response
 		 *
 		 * @access public
 		 * @return boolean
@@ -350,7 +376,7 @@
 
 
 		/**
-		 * Gets the status set on the response
+		 * Gets the code set on the response
 		 *
 		 * @access public
 		 * @return int The current HTTP code for the response
@@ -384,10 +410,10 @@
 		 * @param mixed $response The response to resolve
 		 * @return Response
 		 */
-		static public function resolve($content = NULL)
+		public function resolve($content = NULL)
 		{
 			if (!($content instanceof self)) {
-				$response = new self();
+				$response = clone $this;
 
 				if ($content === NULL) {
 					$response(HTTP\NOT_FOUND);
@@ -404,21 +430,6 @@
 			}
 
 			return $response;
-		}
-
-
-		/**
-		 * Set an individual header on the response
-		 *
-		 * @access public
-		 * @param string $header The header to set
-		 * @param string $value The value for it
-		 * @return Response The response object for chaining
-		 */
-		public function setHeader($header, $value)
-		{
-			$this->headers[$header] = $value;
-			return $this;
 		}
 
 
@@ -454,10 +465,10 @@
 			}
 
 			//
-			// We want to let any renderers work their magic before doing anything else.  A good
-			// renderer will do whatever it can to resolve the response to a string.  Otherwise
-			// whatever the response is will be casted as a (string) and may not do what one
-			// expects.
+			// We want to let any renderers work their magic before doing anything else.  A
+			// good renderer will do whatever it can to resolve the response to a string.
+			// Otherwise whatever the response is will be casted as a (string) and may not do
+			// what one expects.
 			//
 
 			if ($this->view !== NULL) {
@@ -496,13 +507,26 @@
 				: $this->code;
 
 			//
-			// If we don't have a type set we will try to determine the type by caching
-			// our view as a file and getting its mimeType.
+			// Now that our view is rendered to a string and we have our code looked up
+			// we want to deal with caching and etag generation.
 			//
 
-			$this->type = (!$this->type)
-				? self::cache(NULL, $this->view)->getMimeType()
-				: $this->type;
+			$etag          = $this->request->getHeader('If-None-Match');
+			$cache_control = $this->request->getHeader('Cache-Control');
+			$cache_file    = $this->cache($etag);
+
+			if (!$cache_file) {
+				$this->view   = NULL;
+				$this->status = 'Not Modified';
+				$this->code   = 304;
+
+			} else {
+				$this->setHeader('Etag', $etag);
+
+				if (strpos($cache_control, 'no-store') !== FALSE) {
+					$cache_file->delete();
+				}
+			}
 
 			//
 			// Output all of our headers.
@@ -547,6 +571,88 @@
 			}
 
 			return $this->code;
+		}
+
+
+		/**
+		 * Set an individual header on the response
+		 *
+		 * @access public
+		 * @param string $header The header to set
+		 * @param string $value The value for it
+		 * @return Response The response object for chaining
+		 */
+		public function setHeader($header, $value)
+		{
+			$this->headers[$header] = $value;
+			return $this;
+		}
+
+
+		/**
+		 * Sets the request for which the response is intended
+		 *
+		 * @access public
+		 * @param Interfaces\Request $request The request object
+		 * @return void
+		 */
+		public function setRequest(Interfaces\Request $request)
+		{
+			$this->request = $request;
+			$this->url     = $request->getURL();
+			$this->lang    = $request->getBestAcceptLanguage();
+			$this->method  = $request->getMethod();
+		}
+
+
+		/**
+		 * Caches a file for the current unique URL using the data type as part of its id.
+		 *
+		 * @access private
+		 * @param string $etag
+		 * @return App\File
+		 */
+		private function cache(&$etag)
+		{
+			$cache_id  = $this->generateCacheId();
+			$data_hash = md5($this->view);
+
+			if (self::etag($cache_id, $etag, TRUE) && $etag == $data_hash) {
+				return NULL;
+			}
+
+			self::etag($cache_id, $etag = $data_hash);
+
+			if (!$this->type) {
+				$extension = pathinfo($this->url->getPath(), PATHINFO_EXTENSION);
+				$temp_file = $cache_id . ($extension ? '.' . $extension : NULL);
+				$temp_file = new App\File(self::$cacheDirectory . DS . $temp_file);
+
+				$temp_file->write($this->view);
+
+				$this->type = $temp_file->getMimeType();
+				$cache_id   = $this->generateCacheId();
+				$cache_file = $temp_file->rename($cache_id, TRUE);
+
+				self::etag($cache_id, $data_hash);
+
+			} else {
+				$cache_file = new App\File(self::$cacheDirectory . DS . $cache_id);
+			}
+
+			return $cache_file;
+		}
+
+
+		/**
+		 * Generates a cache ID for the response
+		 *
+		 * @access private
+		 * @return string A hash representing the cache id for the response
+		 */
+		private function generateCacheId()
+		{
+			return md5($this->url . $this->method . $this->type . $this->lang);
 		}
 	}
 }
