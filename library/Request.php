@@ -74,6 +74,15 @@
 
 
 		/**
+		 * A collection of reques headers
+		 *
+		 * @access private
+		 * @var array
+		 */
+		private $headers = array();
+
+
+		/**
 		 * The method for the request
 		 *
 		 * @access private
@@ -323,10 +332,6 @@
 		 */
 		static private function processAcceptHeader($header_value)
 		{
-			if (!strlen($_SERVER[$header_value])) {
-				return array();
-			}
-
 			$types  = explode(',', $header_value);
 			$output = array();
 
@@ -385,15 +390,12 @@
 		 * @access public
 		 * @param string $method The method, e.g. get, put, post, etc...
 		 * @param string $accept A valid HTTP Accept string for requesting content type
-		 * @param string|Flourish\URL $url The URL for the request
+		 * @param array $headers The request headers
 		 * @param string|array $data A query string or array to pull data from
 		 * @return void
 		 */
-		public function __construct($method = NULL, $accept = NULL, $url = NULL, $data = NULL)
+		public function __construct($method = NULL, $accept = NULL, $headers = array(), $data = NULL)
 		{
-			$this->url      = new App\URL($url);
-			$this->files    = $_FILES;
-
 			$this->protocol = isset($_SERVER['SERVER_PROTOCOL'])
 				? $_SERVER['SERVER_PROTOCOL']
 				: 'HTTP/1.1';
@@ -499,7 +501,7 @@
 		 */
 		public function checkMethod($method)
 		{
-			return strtolower($method) == $this->method;
+			return strtoupper($method) == $this->method;
 		}
 
 
@@ -662,6 +664,23 @@
 
 
 		/**
+		 *
+		 */
+		public function getHeader($header)
+		{
+			$header = 'HTTP_' . strtoupper(str_replace('-', '_', $header));
+
+			if (!isset($this->headers[$header])) {
+				$this->headers[$header] = isset($_SERVER[$header])
+					? $_SERVER[$header]
+					: NULL;
+			}
+
+			return $this->headers[$header];
+		}
+
+
+		/**
 		 * Returns the HTTP `Accept-Language`s sorted by their `q` values (from high to low)
 		 *
 		 * The returned array format is `{language} => {q value}` sorted (in a stable-fashion)
@@ -796,6 +815,10 @@
 		 */
 		public function getURL()
 		{
+			if (!$this->url) {
+				$this->url = new App\URL();
+			}
+
 			return $this->url;
 		}
 
@@ -854,7 +877,7 @@
 		 */
 		public function redirect($url = NULL, $type = 303)
 		{
-			$this->url = $this->url->modify($url);
+			$url = $this->getURL()->modify($url);
 
 			if ($this->protocol == 'HTTP/1.0') {
 				switch ($type) {
@@ -884,7 +907,7 @@
 				}
 			}
 
-			header('Location: ' . $this->url);
+			header('Location: ' . $url);
 			exit(0);
 		}
 

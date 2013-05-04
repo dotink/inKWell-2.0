@@ -4,8 +4,6 @@
 	 * @author Matthew J. Sahagian [mjs] <msahagian@dotink.org>
 	 */
 
-	$this->head->asset('common', 'http://dotink.github.io/inKLing/inkling.css');
-
 	%>
 	<!doctype html>
 	<html>

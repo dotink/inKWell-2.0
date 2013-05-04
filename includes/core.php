@@ -834,6 +834,8 @@
 				}
 			}
 
+			$response->setRequest($request);
+
 			return $router->run($request, $response);
 		}
 

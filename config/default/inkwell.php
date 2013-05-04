@@ -85,6 +85,7 @@
 
 		'aliases' => [
 			'Date'      => 'Dotink\Flourish\Date',
+			'File'      => 'Dotink\Flourish\File',
 			'Text'      => 'Dotink\Flourish\Text',
 			'Time'      => 'Dotink\Flourish\Time',
 			'Timestamp' => 'Dotink\Flourish\Timestamp',
