@@ -6,7 +6,7 @@
 
 	$this->head->asset('highlight', 'http://yandex.st/highlightjs/7.3/styles/tomorrow-night-bright.min.css');
 	$this->head->asset('highlight', 'http://yandex.st/highlightjs/7.3/highlight.min.js');
-	$this->head->asset('toc',       'scripts/dotink/toc_sex.js');
+	$this->head->asset('toc',       'assets/scripts/dotink/toc_sex.js');
 
 	$this->head->push('title', $this['title']);
 
