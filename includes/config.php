@@ -9,7 +9,11 @@
 	$config_dir  = NULL;
 	$config_name = isset($_SERVER['IW_CONFIG'])
 		? $_SERVER['IW_CONFIG']
-		: NULL;
+		: (
+			isset($_ENV['IW_CONFIG'])
+				? $_ENV['IW_CONFIG']
+				: NULL
+		);
 
 	$app->config($config_name, $config_dir);
 }
