@@ -18,9 +18,10 @@
 	class Router implements Interfaces\Inkwell, Interfaces\Router
 	{
 		use Traits\Emitter;
+		use Traits\ActionCaller;
 
-		const CONTROLLER_INTERFACE = 'Dotink\Interfaces\Controller';
-		const REGEX_TOKEN          = '/\[[^\]]*\]/';
+		const CONTAINER_INTERFACE = 'Dotink\Interfaces\Container';
+		const REGEX_TOKEN         = '/\[[^\]]*\]/';
 
 
 		/**
@@ -458,8 +459,6 @@
 			}
 
 			foreach ($this->links as $pattern => $link) {
-				$this->controller = NULL;
-
 				try {
 					if (preg_match('#^' . $pattern . '$#', $request_uri, $matches)) {
 						array_shift($matches);
@@ -484,6 +483,8 @@
 
 						$this->emit('endAction', $response);
 
+						break;
+
 					} elseif (preg_match('#^' . $pattern . '$#', $restless_uri)) {
 						$request->redirect($restless_uri, 301);
 					}
@@ -503,50 +504,6 @@
 
 
 		/**
-		 * Calls an action and returns an action response
-		 *
-		 * @access private
-		 * @param mixed $action The action to call
-		 * @param Interfaces\Request $request The current request being made
-		 * @param Interfaces\Response $response The current response
-		 */
-		private function callAction($action, $request, $response)
-		{
-			$context = [
-				'request'  => $request,
-				'response' => $response,
-				'router'   => $this
-			];
-
-			if ($action instanceof \Closure) {
-				$action_response = $action($context);
-
-			} elseif (is_array($action)) {
-				$class = is_object($action[0])
-					? get_class($action[0])
-					: $action[0];
-
-				if (!in_array(self::CONTROLLER_INTERFACE, class_implements($class))) {
-					$this->controller = new $action[0]();
-					$action_response  = $this->controller->$action[1]($context);
-
-				} else {
-					$this->controller = new $action[0]($context);
-
-					$this->emit('createController', $this->controller);
-
-					$action_response = $this->controller->$action[1]();
-				}
-
-			} else {
-				$action_response = $action();
-			}
-
-			return $action_response;
-		}
-
-
-		/**
 		 * Captures a response from a called action
 		 *
 		 * @access private
@@ -559,13 +516,12 @@
 		{
 			ob_start();
 
-			$action_response = $this->callAction($action, $request, $response);
-
-			$response = ($output = ob_get_clean())
+			$action_response   = self::callAction($this, $action, $request, $response);
+			$resolved_response = ($output = ob_get_clean())
 				? $response(HTTP\OK, NULL, [], $output)
 				: $response->resolve($action_response);
 
-			return $response;
+			return $resolved_response;
 		}
 
 		/**

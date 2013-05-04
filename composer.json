@@ -22,6 +22,7 @@
 		"dotink/flourish": "dev-master",
 		"dotink/container-trait": "dev-master",
 		"dotink/emitter-trait": "dev-master",
+		"dotink/actioncaller-trait": "dev-master",
 		"kriswallsmith/assetic": "1.1.*@dev"
 	},
 	"extra": {
