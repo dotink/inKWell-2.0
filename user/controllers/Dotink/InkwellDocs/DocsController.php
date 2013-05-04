@@ -52,7 +52,9 @@
 		public function missing()
 		{
 			return $this['response'](HTTP\NOT_FOUND, Inkwell\View::create('html', [
-				'staple' => 'Dotink/InkwellDocs/404.html'
+				'header' => 'Dotink/InkwellDocs/header.html',
+				'staple' => 'Dotink/InkwellDocs/404.html',
+				'footer' => 'Dotink/InkwellDocs/footer.html'
 			], [
 				'id' => 'not_found'
 			]));
@@ -82,16 +84,18 @@
 
 			if ($path == '/index.md') {
 				$id    = 'homepage';
+				$tmpl  = 'home';
 				$title = 'A PHP Framework for PHP Developers :: inKWell PHP MVC';
 			} else {
 				$id    = 'doc';
+				$tmpl  = 'docs/show';
 				$toc   = self::generateToc($doc);
 				$title = ucwords(str_replace('_', ' ', pathinfo($path, PATHINFO_FILENAME)));
 			}
 
 			return Inkwell\View::create('html', [
 				'header' => 'Dotink/InkwellDocs/header.html',
-				'staple' => 'Dotink/InkwellDocs/' . $id . '.html',
+				'staple' => 'Dotink/InkwellDocs/' . $tmpl . '.html',
 				'footer' => 'Dotink/InkwellDocs/footer.html'
 			], [
 				'id'    => $id,

@@ -4,9 +4,6 @@
 	 * @author Matthew J. Sahagian [mjs] <msahagian@dotink.org>
 	 */
 
-	 $this->head->asset('common', 'http://dotink.github.io/inKLing/theme.css');
-	 $this->head->asset('common', 'styles/dotink/inkwell_docs/main.css');
-
 	%>
 	<h1>Missing Documentation? NEVER!</h1>
 	<p class="highlight">We Completely and Utterly Apologize for our Behavior</p>

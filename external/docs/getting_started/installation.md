@@ -38,6 +38,17 @@ While you will still need composer to resolve dependencies, you can boostrap you
 git clone https://github.com/dotink/inKWell-2.0.git <directory>
 ```
 
+## Permissions {#permissions}
+
+There are two directories in inKWell which are written to under the default configuration.
+
+- writable
+- assets/cache
+
+The `writable` directory is a general directory used for various classes to store caches and/or uploaded files.  New directories and files will be created in here as needed.  The `assets/cache` directory is used for caching combined and pre-processed assets in the view.
+
+Make sure these directories are writable by whatever user and/or group your webserver or PHP is running as.
+
 ## Test Your Installation {#test_your_install}
 
 You can run a quick test of your installation by running the following command:

@@ -10,7 +10,7 @@ return $this['response'](HTTP\OK, 'text/plain', 'I got you a dollar.');
 
 ## Checking and Getting Response Information {#response_information}
 
-If you need to know about the current state of the response there are a number of methods you can use to check and get various pieces of information.
+If you need to know about the current state of the response there are a number of methods you can use to check or get various pieces of information.
 
 Checking the status:
 
@@ -145,7 +145,7 @@ The response will also respect the `no-store` setting as it may have been sent b
 You can automatically send a cached response by doing the following:
 
 ```php
-$this['response']->sendCache();
+$this['response']->sendCached();
 ```
 
 If the cached response is expired, no action will be taken.  If the cached response is valid, however, a `Flourish\YieldException` will be produced.  You can catch this exception in the case of sub-requests and resubmit a request with modified headers if you prefer not to recieve a cached copy.

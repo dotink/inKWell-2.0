@@ -4,14 +4,13 @@
 	 * @author Matthew J. Sahagian [mjs] <msahagian@dotink.org>
 	 */
 
-	 $this->head->asset('highlight', 'http://yandex.st/highlightjs/7.3/styles/tomorrow-night-bright.min.css');
-	 $this->head->asset('highlight', 'http://yandex.st/highlightjs/7.3/highlight.min.js');
+	$this->head->asset('highlight', 'http://yandex.st/highlightjs/7.3/styles/tomorrow-night-bright.min.css');
+	$this->head->asset('highlight', 'http://yandex.st/highlightjs/7.3/highlight.min.js');
+	$this->head->asset('toc',       'scripts/dotink/toc_sex.js');
 
-	 $this->head->asset('toc', 'scripts/dotink/toc_sex.js');
+	$this->head->push('title', $this['title']);
 
-	 $this->head->add('common', 'Dotink/InkwellDocs/doc_head.html');
-
-	 $this->head->push('title', $this['title']);
+	$this->head->add('common', 'Dotink/InkwellDocs/docs/head.html');
 
 	%>
 	<script type="text/javascript">

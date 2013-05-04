@@ -90,10 +90,10 @@ return Config::create(['@routing'], [
 
 Configurations typed as libraries have certain elements which carry meaning to inKWell.  Namely, the following keywords are used to specify information that can auto-configure the scaffolder and autoloader:
 
-- class
-- root_directory
-- auto_load
-- auto_scaffold
+- `'class'`
+- `'root_directory'`
+- `'auto_load'`
+- `'auto_scaffold'`
 
 We will not go into how these function here, but suffice to say unless you are creating a base class or a modules which defines some dynamic behavior, you should avoid using the 'Library' key.
 
