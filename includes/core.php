@@ -155,26 +155,15 @@
 		 *
 		 * @access public
 		 * @param string $root_directory The root directory for the application
-		 * @param string $library_directory The inKWell core library directory
 		 * @return void
 		 */
-		public function __construct($root_directory, $library_directory = 'library')
+		public function __construct($root_directory)
 		{
 			//
 			// Set our application root
 			//
 
 			$this->addRoot(NULL, $root_directory);
-
-			//
-			// Our initial loader map is established.  This will use compatibility transformations,
-			// meaning that namespaces will be ignored when loading the classes.
-			//
-
-			$this->loaders['Dotink\Inkwell\*']    = $library_directory;
-			$this->loaders['Dotink\Flourish\*']   = $library_directory . DS . 'flourish';
-			$this->loaders['Dotink\Interfaces\*'] = $library_directory . DS . 'interfaces';
-			$this->loaders['Dotink\Traits\*']     = $library_directory . DS . 'traits';
 
 			$composer_autoloader = implode(DS, [
 				$this->getRoot(NULL, 'vendor'),

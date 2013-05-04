@@ -55,7 +55,7 @@
 		// versions of various assets post-preprocessing.
 		//
 
-		'cache_directory' => 'cache',
+		'cache_directory' => 'assets/cache',
 
 		//
 		// You can add assetic compatible filter classes to the lists below.  Add a new key and

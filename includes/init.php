@@ -4,7 +4,7 @@
 	include 'core.php';
 	include 'functions.php';
 
-	$lib_root = isset($_SERVER['IW_LIB_ROOT'])
+	$library_root = isset($_SERVER['IW_LIB_ROOT'])
 		? $_SERVER['IW_LIB_ROOT']
 		: (
 			isset($_ENV['IW_LIB_ROOT'])
@@ -20,7 +20,19 @@
 	// possible to move or rename the base folder.
 	//
 
-	$app = new IW(realpath(dirname(__DIR__)), $lib_root);
+	$app = new IW(realpath(dirname(__DIR__)));
+
+
+	//
+	// Our initial loader map is established.  This will use compatibility transformations,
+	// meaning that namespaces will be ignored when loading the classes.
+	//
+
+	$app->addLoadingMap('Dotink\Inkwell\*',    $library_root);
+	$app->addLoadingMap('Dotink\Flourish\*',   $library_root . DS . 'flourish');
+	$app->addLoadingMap('Dotink\Interfaces\*', $library_root . DS . 'interfaces');
+	$app->addLoadingMap('Dotink\Traits\*',     $library_root . DS . 'traits');
+
 
 	//
 	// Register our dependencies
