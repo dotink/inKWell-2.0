@@ -42,10 +42,10 @@ git clone https://github.com/dotink/inKWell-2.0.git <directory>
 
 There are two directories in inKWell which are written to under the default configuration.
 
-- writable
-- assets/cache
+- `writable`
+- `public/assets/cache`
 
-The `writable` directory is a general directory used for various classes to store caches and/or uploaded files.  New directories and files will be created in here as needed.  The `assets/cache` directory is used for caching combined and pre-processed assets in the view.
+The `writable` directory is a general directory used for various classes to store caches and/or uploaded files.  New directories and files will be created in here as needed.  The `public/assets/cache` directory is used for caching combined and pre-processed assets in the view.
 
 Make sure these directories are writable by whatever user and/or group your webserver or PHP is running as.
 
@@ -54,14 +54,14 @@ Make sure these directories are writable by whatever user and/or group your webs
 You can run a quick test of your installation by running the following command:
 
 ```php
-php -S localhost:8080 -t <directory/assets>
+php -S localhost:8080 -t <directory/public>
 ```
 
 Then visiting [http://localhost:8080/system_information](http://localhost:8080/system_information) in your browser.  If everything goes well you should see a standard `phpinfo()` dump.
 
 ## Server Setup {#server_setup}
 
-Setting up inKWell on your server is simple.  The assets folder includes an `.htaccess` file which has everything you need for apache.  If you're using PHP-FPM or CGI, the included `.user.ini` file will set the appropriate flags for PHP as well and NGINX users can use the below code as a starting point.
+Setting up inKWell on your server is simple.  The `public` folder includes an `.htaccess` file which has everything you need for apache.  If you're using PHP-FPM or CGI, the included `.user.ini` file will set the appropriate flags for PHP as well and NGINX users can use the below code as a starting point.
 
 **Note: If you're using apache you will need to ensure mod_rewrite is enabled, as well as `.htaccess` overrides**
 
@@ -72,7 +72,7 @@ server {
 		listen       80;
 		server_name  <hostname>;
 
-		root         <path_to_inkwell>/assets;
+		root         <path_to_inkwell>/public;
 		index        index.php;
 
 		gzip         on;

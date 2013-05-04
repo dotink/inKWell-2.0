@@ -109,7 +109,7 @@ if ($this->checkEntryAction('show')) {
 You can also provide an explicit class if you're checking whether a method on another controller is the entry point.
 
 ```php
-if ($this->checkEntry(__NAMESPACE__ . '\OtherController', 'list')) {
+if ($this->checkEntryAction(__NAMESPACE__ . '\OtherController', 'list')) {
 	...
 }
 ```
