@@ -33,7 +33,7 @@
 		// wish to set the error_email_to to your e-mail address.
 		//
 
-		'display_errors' => TRUE,
+		'display_errors' => NULL,
 		'error_level'    => E_ALL & ~E_STRICT,
 		'error_email_to' => NULL,
 
