@@ -84,7 +84,9 @@
 		//
 
 		'aliases' => [
+			'Core'      => 'Dotink\Flourish\Core',
 			'Date'      => 'Dotink\Flourish\Date',
+			'Directory' => 'Dotink\Flourish\Directory',
 			'File'      => 'Dotink\Flourish\File',
 			'Text'      => 'Dotink\Flourish\Text',
 			'Time'      => 'Dotink\Flourish\Time',

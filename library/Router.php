@@ -75,7 +75,7 @@
 		 * @access private
 		 * @var string
 		 */
-		private $entryAction = NULL;
+		private $action = NULL;
 
 
 		/**
@@ -677,7 +677,7 @@
 				}
 
 				if (!$this->entry) {
-					$this->entryAction = $method;
+					$this->action = $method;
 					$this->entry       = $class;
 				}
 
