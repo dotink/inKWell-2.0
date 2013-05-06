@@ -19,6 +19,7 @@
 	],
 	"require": {
 		"php": ">=5.4.0",
+		"tracy/tracy": "dev-master",
 		"dotink/flourish": "dev-master",
 		"dotink/container-trait": "dev-master",
 		"dotink/emitter-trait": "dev-master",

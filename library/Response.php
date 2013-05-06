@@ -205,53 +205,6 @@
 
 
 		/**
-		 * Rendering callback for object typed views.
-		 *
-		 * @static
-		 * @access protected
-		 * @param Response $response The response to render
-		 * @return void
-		 */
-		static protected function renderObject($response)
-		{
-			if (is_object($response->view)) {
-				$view_class = get_class($response->view);
-				$render_key = strtolower($view_class);
-
-				if (isset(self::$renderMethods[$render_key])) {
-					$method         = self::$renderMethods[$render_key];
-					$response->view = $response->view->$method();
-				} elseif (is_callable(array($response->view, '__toString'))) {
-					$response->view = (string) $response->view;
-				} else {
-					$response->view = $view_class;
-				}
-			}
-		}
-
-
-		/**
-		 * This will send a cache file for the current unique URL based on a mime type.
-		 *
-		 * The response will only be sent if the cached response is less than the $max_age
-		 * parameter in seconds.  This defaults to 120, meaning that if the file is older
-		 * than 2 minutes, this function will return.  Otherwise, the cache file is sent and
-		 * the script exits.
-		 *
-		 * @static
-		 * @access public
-		 * @param string $type The mime type for the cached response
-		 * @param string $max_age The time in seconds when the cache shouldn't be used, default 120
-		 * @param string $entropy_data A string to calculate entropy from, default NULL
-		 * @param string $max_entropy The maximum amount of entropy allowed, default 0
-		 */
-		static public function sendCached()
-		{
-			return;
-		}
-
-
-		/**
 		 * Resolves a response state name into the appropriate code
 		 *
 		 * @static
@@ -300,6 +253,15 @@
 			}
 
 			return FALSE;
+		}
+
+
+		/**
+		 *
+		 */
+		public function __construct()
+		{
+			$this->status = HTTP\NOT_FOUND;
 		}
 
 
@@ -457,7 +419,8 @@
 			if ($this->view === NULL) {
 				if (isset(self::$states[$this->status]['body'])) {
 					$this->view = self::$states[$this->status]['body'];
-					$this->view = Flourish\Text::create($this->view)->compose();
+					$this->view = App\Text::create($this->view)->compose();
+
 				} else {
 					$this->code   = 204;
 					$this->status = HTTP\NO_CONTENT;
@@ -537,7 +500,7 @@
 			//
 
 			$headers = [
-				!Flourish\Core::checkSAPI('cgi-fcgi')
+				!App\Core::checkSAPI('cgi-fcgi')
 					? sprintf('%s %d %s', $_SERVER['SERVER_PROTOCOL'], $this->code, $this->status)
 					: sprintf('Status: %d %s', $this->code, $this->status)
 			];
@@ -556,7 +519,7 @@
 				}
 			}
 
-			if ($headers_only && Flourish\Core::checkSAPI('cli')) {
+			if ($headers_only && App\Core::checkSAPI('cli')) {
 				foreach ($headers as $header) {
 					print($header . LB);
 				}

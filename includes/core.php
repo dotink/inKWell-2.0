@@ -3,6 +3,7 @@
 	use App;
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
+	use Tracy\Debugger;
 	use ArrayAccess;
 
 	/**
@@ -417,14 +418,14 @@
 			// time related functions.
 			//
 
-			Flourish\Timestamp::setDefaultTimezone(isset($config['default_timezone'])
+			App\Timestamp::setDefaultTimezone(isset($config['default_timezone'])
 				? $config['default_timezone']
 				: 'GMT'
 			);
 
 			if (isset($config['date_formats']) && is_array($config['date_formats'])) {
 				foreach ($config['date_formats'] as $name => $format) {
-					Flourish\Timestamp::defineFormat($name, $format);
+					App\Timestamp::defineFormat($name, $format);
 				}
 			}
 
@@ -442,32 +443,6 @@
 			}
 
 			//
-			// Initialize Error Reporting
-			//
-
-			if (isset($config['error_level'])) {
-				error_reporting($config['error_level']);
-			}
-
-			if (isset($config['display_errors'])) {
-				if ($config['display_errors']) {
-					Flourish\Core::enableErrorHandling('html');
-					Flourish\Core::enableExceptionHandling('html', 'time');
-					ini_set('display_errors', 1);
-				} elseif (isset($config['error_email_to'])) {
-					Flourish\Core::enableErrorHandling($config['error_email_to']);
-					Flourish\Core::enableExceptionHandling($config['error_email_to'], 'time');
-					ini_set('display_errors', 0);
-				} else {
-					ini_set('display_errors', 0);
-				}
-			} elseif ($this->checkExecutionMode('development')) {
-				ini_set('display_errors', 1);
-			} else {
-				ini_set('display_errors', 0);
-			}
-
-			//
 			// Set up our write directory
 			//
 
@@ -479,6 +454,49 @@
 				$this->writeDirectory = $this->getRoot() . DS . $write_directory;
 			} else {
 				$this->writeDirectory = $write_directory;
+			}
+
+			//
+			// Initialize Error Reporting
+			//
+
+			if (isset($config['error_level'])) {
+				error_reporting($config['error_level']);
+			}
+
+			if ($this->checkExecutionMode('development')) {
+				$display_errors = TRUE;
+
+			} else {
+				$display_errors = FALSE;
+			}
+
+			$display_errors = isset($config['display_errors'])
+				? $config['display_errors']
+				: $display_errors;
+
+			if ($display_errors) {
+				ini_set('display_errors', 1);
+
+				if (class_exists('Tracy\Debugger')) {
+					Debugger::enable(Debugger::DEVELOPMENT, $this->getWriteDirectory('logs'));
+				} else {
+					App\Core::enableErrorHandling('html');
+					App\Core::enableExceptionHandling('html', 'time');
+				}
+
+			} else {
+				ini_set('display_errors', 0);
+
+				if (isset($config['error_email_to'])) {
+					if (class_exists('Tracy\Debugger')) {
+						Debugger::$email = $config['error_email_to'];
+						Debugger::enable(Debugger::PRODUCTION, $this->getWriteDirectory('logs'));
+					} else {
+						App\Core::enableErrorHandling($config['error_email_to']);
+						App\Core::enableExceptionHandling($config['error_email_to'], 'time');
+					}
+				}
 			}
 
 			return $this;
@@ -543,7 +561,7 @@
 			}
 
 			if (!is_dir($write_directory)) {
-				(new Flourish\Directory($write_directory))->create(0777);
+				(new App\Directory($write_directory))->create(0777);
 			}
 
 			return rtrim($write_directory, '/\\' . DS);
