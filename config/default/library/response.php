@@ -9,6 +9,12 @@
 		'class' => __NAMESPACE__ . '\Response',
 
 		//
+		// The default content type for responses
+		//
+
+		'default_type' => 'text/html',
+
+		//
 		// Response state are short name aliases for various response codes and/or default content.
 		// They should not include redirects, as redirects are never as an actual bodied response
 		// and are handled by the Request class.
