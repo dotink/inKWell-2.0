@@ -6,7 +6,7 @@
 	//
 	// We want to ensure that if we run as root that we take on the groupid
 	// and userid of our files.  This allows scaffolded files and written files
-	// to maintain proper user and grou permissions.
+	// to maintain proper user and group permissions.
 	//
 
 	if (function_exists('posix_setgid')) {
@@ -26,13 +26,18 @@
 	//
 	// Set up our default pseudo $_SERVER parameters
 	//
-	$_SERVER['DOCUMENT_ROOT']   = dirname(__FILE__);
-	$_SERVER['REQUEST_URI']     = '/';
-	$_SERVER['REMOTE_ADDR']     = '127.0.0.1';
+
+	$_SERVER['SERVER_PROTOCOL'] = 'HTTP/1.1';
 	$_SERVER['SERVER_NAME']     = 'localhost';
 	$_SERVER['SERVER_PORT']     = 80;
-	$_SERVER['SERVER_PROTOCOL'] = 'HTTP/1.1';
+
 	$_SERVER['REQUEST_METHOD']  = 'GET';
+	$_SERVER['REQUEST_URI']     = '/';
+
+	$_SERVER['REMOTE_ADDR']     = '127.0.0.1';
+	$_SERVER['DOCUMENT_ROOT']   = !isset($_ENV['DOCUMENT_ROOT'])
+		? dirname(__FILE__) . DIRECTORY_SEPARATOR . 'public'
+		: $_ENV['DOCUMENT_ROOT'];
 
 	//
 	// And these guys.
@@ -55,8 +60,8 @@
 	// Set some basics regardless of configuration
 	//
 
-	Flourish\Core::enableErrorHandling('html');
-	Flourish\Core::enableExceptionHandling('html');
+	App\Core::enableErrorHandling('html');
+	App\Core::enableExceptionHandling('html');
 
 	$___php = isset($_ENV['IW_PHP_CMD'])
 		? $_ENV['IW_PHP_CMD']
@@ -204,7 +209,7 @@
 				case '\m':
 					echo PHP_EOL;
 
-					if (!Flourish\Core::checkOS('windows')) {
+					if (!App\Core::checkOS('windows')) {
 						echo 'Entering non-interactive mode, press <ctrl>+D when done.' . PHP_EOL;
 					} else {
 						echo 'Entering non-interactive mode, press <ctrl>+Z when done.' . PHP_EOL;
@@ -322,7 +327,7 @@
 				if ($___command && ___check($___command)) {
 
 					ob_start();
-					Flourish\Core::startErrorCapture();
+					App\Core::startErrorCapture();
 
 					try {
 						eval($___command);
@@ -332,7 +337,7 @@
 
 					$___output  = ob_get_clean();
 
-					if(is_array($errors = Flourish\Core::stopErrorCapture())) {
+					if(is_array($errors = App\Core::stopErrorCapture())) {
 						foreach ($errors as $error) {
 							echo $error['type'] . ':  ' . $error['string'] . PHP_EOL;
 						}
@@ -398,8 +403,13 @@
 					'-d display_errors=1',
 					escapeshellarg(__FILE__)
 			)));
+
+			exit(1);
+
 		} else {
 			echo PHP_EOL;
+
+			exit(0);
 		}
 	}
 
@@ -412,7 +422,7 @@
 	 */
 	function ___verify($file)
 	{
-		if (Flourish\Core::checkOS('windows')) {
+		if (App\Core::checkOS('windows')) {
 			$syntax_check = trim(shell_exec(sprintf(
 				$GLOBALS['___php'] . ' -l %s',
 				escapeshellarg($file)
@@ -472,7 +482,7 @@
 
 	/**
 	 * Runs an SQL query on a provided database.  The function will dump
-	 * the rows returned in the result using Flourish\Core::expose();
+	 * the rows returned in the result using App\Core::expose();
 	 *
 	 * @param fDatabase $db The database object to run the query on
 	 * @param string $sql The query to run
@@ -494,7 +504,7 @@
 				$result = $db->query($sql);
 
 				foreach($result as $record) {
-					Flourish\Core::expose($record);
+					App\Core::expose($record);
 				}
 			} catch (Exception $e) {
 				echo 'Exception: ' . $e->getMessage();
@@ -529,7 +539,7 @@
 	 */
 	function ___clear_screen()
 	{
-		if (Flourish\Core::checkOS('windows')) {
+		if (App\Core::checkOS('windows')) {
 
 			//
 			// TODO: Figure out a way to clear the screen on windows that actually works

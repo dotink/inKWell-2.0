@@ -18,7 +18,7 @@
 	{
 		const DEFAULT_CACHE_DIRECTORY = 'cache/responses';
 		const DEFAULT_RESPONSE        = HTTP\NOT_FOUND;
-
+		const DEFAULT_TYPE            = 'text/html';
 
 		/**
 		 * Location of the cache directory
@@ -28,6 +28,26 @@
 		 * @var string
 		 */
 		static private $cacheDirectory = NULL;
+
+
+		/**
+		 * Default type
+		 *
+		 * @static
+		 * @access private
+		 * @var string
+		 */
+		static private $defaultType = NULL;
+
+
+		/**
+		 * A list of available filters
+		 *
+		 * @static
+		 * @access private
+		 * @var array
+		 */
+		static private $renderFilters = array();
 
 
 		/**
@@ -169,17 +189,57 @@
 				? $app->getWriteDirectory($config['cache_directory'])
 				: $app->getWriteDirectory(self::DEFAULT_CACHE_DIRECTORY);
 
+			self::$defaultType = isset($config['default_type'])
+				? $config['default_type']
+				: self::DEFAULT_TYPE;
+
 			if (isset($config['states'])) {
 				self::$states = array_merge(self::$states, $config['states']);
 			}
 
-			foreach ($app['config']->getByType('array', '@rendering', 'methods') as $methods) {
-				foreach ($methods as $class => $function) {
-					self::registerRenderMethod($class, $function);
+			foreach ($app['config']->getByType('array', '@rendering') as $rendering_config) {
+				if (isset($rendering_config['filters'])) {
+					foreach ($rendering_config['filters'] as $mime_type => $filters) {
+						self::registerRenderFilter($mime_type, $filters);
+					}
+				}
+
+				if (isset($rendering_config['methods'])) {
+					foreach ($rendering_config['methods'] as $class => $function) {
+						self::registerRenderMethod($class, $function);
+					}
 				}
 			}
 
 			return TRUE;
+		}
+
+
+		/**
+		 * Registers a rendering filter
+		 *
+		 * @static
+		 * @access public
+		 * @param string $class The class to register a render method for.
+		 * @param string $method The method to call on the object to render it
+		 * @return void
+		 */
+		static public function registerRenderFilter($mime_type, $filter)
+		{
+			$mime_type = strtolower($mime_type);
+
+			if (!is_array($filter)) {
+				$filter = [(string) $filter];
+			}
+
+			if (!isset(self::$filters[$mime_type])) {
+				self::$renderFilters[$mime_type] = array();
+			}
+
+			self::$renderFilters[$mime_type] = array_merge(
+				self::$renderFilters[$mime_type],
+				$filter
+			);
 		}
 
 
@@ -225,7 +285,7 @@
 
 			throw new Flourish\ProgrammerException(
 				'Cannot create response with undefined or invalid state "%s"',
-				$state
+				$statef
 			);
 		}
 
@@ -257,11 +317,14 @@
 
 
 		/**
+		 * Create a new response, invoking the default status
 		 *
+		 * @access public
+		 * @return void
 		 */
 		public function __construct()
 		{
-			$this->status = HTTP\NOT_FOUND;
+			$this(NULL);
 		}
 
 
@@ -404,7 +467,8 @@
 		 */
 		public function send($headers_only = FALSE)
 		{
-			$version  = end(explode($_SERVER['SERVER_PROTOCOL'], '/'));
+			$protocol = explode($_SERVER['SERVER_PROTOCOL'], '/');
+			$version  = end($protocol);
 			$aliases  = array(
 				'1.0' => array( 405 => 400, 406 => 400 /* NO NEED FOR REDIRECTS */ ),
 				'1.1' => array( /* CURRENT VERSION OF HTTP SO WE SHOULD BE GOOD */ )
@@ -425,6 +489,7 @@
 					$this->code   = 204;
 					$this->status = HTTP\NO_CONTENT;
 				}
+
 			}
 
 			//
@@ -433,8 +498,18 @@
 			// Otherwise whatever the response is will be casted as a (string) and may not do
 			// what one expects.
 			//
+			// NOTE: This logic is kept separate from the if statement above, in the event
+			// the default body for a response needs additional processing.
+			//
 
 			if ($this->view !== NULL) {
+				if (isset(self::$renderFilters[$this->type])) {
+					foreach (self::$renderFilters[$this->type] as $filter) {
+						if ($filter::filter($this)) {
+							break;
+						}
+					}
+				}
 
 				if (is_object($this->view)) {
 					$view_class = get_class($this->view);
@@ -594,6 +669,11 @@
 				$temp_file->write($this->view);
 
 				$this->type = $temp_file->getMimeType();
+
+				if (!$extension && $this->type == 'text/plain') {
+					$this->type = self::$defaultType;
+				}
+
 				$cache_id   = $this->generateCacheId();
 				$cache_file = $temp_file->rename($cache_id, TRUE);
 

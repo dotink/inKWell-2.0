@@ -844,7 +844,6 @@
 
 				if (class_exists('Tracy\Debugger')) {
 					Debugger::enable(Debugger::DEVELOPMENT, $this->getWriteDirectory('logs'));
-					Debugger::$bar = NULL;
 				} else {
 					App\Core::enableErrorHandling('html');
 					App\Core::enableExceptionHandling('html', 'time');
