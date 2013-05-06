@@ -456,48 +456,7 @@
 				$this->writeDirectory = $write_directory;
 			}
 
-			//
-			// Initialize Error Reporting
-			//
-
-			if (isset($config['error_level'])) {
-				error_reporting($config['error_level']);
-			}
-
-			if ($this->checkExecutionMode('development')) {
-				$display_errors = TRUE;
-
-			} else {
-				$display_errors = FALSE;
-			}
-
-			$display_errors = isset($config['display_errors'])
-				? $config['display_errors']
-				: $display_errors;
-
-			if ($display_errors) {
-				ini_set('display_errors', 1);
-
-				if (class_exists('Tracy\Debugger')) {
-					Debugger::enable(Debugger::DEVELOPMENT, $this->getWriteDirectory('logs'));
-				} else {
-					App\Core::enableErrorHandling('html');
-					App\Core::enableExceptionHandling('html', 'time');
-				}
-
-			} else {
-				ini_set('display_errors', 0);
-
-				if (isset($config['error_email_to'])) {
-					if (class_exists('Tracy\Debugger')) {
-						Debugger::$email = $config['error_email_to'];
-						Debugger::enable(Debugger::PRODUCTION, $this->getWriteDirectory('logs'));
-					} else {
-						App\Core::enableErrorHandling($config['error_email_to']);
-						App\Core::enableExceptionHandling($config['error_email_to'], 'time');
-					}
-				}
-			}
+			$this->configDebugging($config);
 
 			return $this;
 		}
@@ -844,6 +803,65 @@
 			$response->setRequest($request);
 
 			return $router->run($request, $response);
+		}
+
+
+		/**
+		 * Configures debugging for inKwell
+		 *
+		 * @access private
+		 * @param array $config The inKWell configuration
+		 * @return void
+		 */
+		private function configDebugging($config)
+		{
+			if (isset($config['error_level'])) {
+				error_reporting($config['error_level']);
+			}
+
+			//
+			// Return pretty much immediatley if we're on CLI
+			//
+
+			if (App\Core::checkSAPI('cli')) {
+				ini_set('display_errors', 1);
+				return;
+			}
+
+			if ($this->checkExecutionMode('development')) {
+				$display_errors = TRUE;
+
+			} else {
+				$display_errors = FALSE;
+			}
+
+			$display_errors = isset($config['display_errors'])
+				? $config['display_errors']
+				: $display_errors;
+
+			if ($display_errors) {
+				ini_set('display_errors', 1);
+
+				if (class_exists('Tracy\Debugger')) {
+					Debugger::enable(Debugger::DEVELOPMENT, $this->getWriteDirectory('logs'));
+				} else {
+					App\Core::enableErrorHandling('html');
+					App\Core::enableExceptionHandling('html', 'time');
+				}
+
+			} else {
+				ini_set('display_errors', 0);
+
+				if (isset($config['error_email_to'])) {
+					if (class_exists('Tracy\Debugger')) {
+						Debugger::$email = $config['error_email_to'];
+						Debugger::enable(Debugger::PRODUCTION, $this->getWriteDirectory('logs'));
+					} else {
+						App\Core::enableErrorHandling($config['error_email_to']);
+						App\Core::enableExceptionHandling($config['error_email_to'], 'time');
+					}
+				}
+			}
 		}
 
 

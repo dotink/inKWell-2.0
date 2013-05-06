@@ -386,10 +386,9 @@
 	 */
 	function ___respawn()
 	{
-		echo ob_get_clean() . "\n";
-
 		if (!isset($GLOBALS['___called_quit'])) {
-			echo "Resetting...\n";
+			echo ob_get_clean() . PHP_EOL;
+			echo 'Resetting...' . PHP_EOL;
 			passthru(implode(' ', array(
 				'php -q',
 					'-d register_globals=0',
@@ -399,6 +398,8 @@
 					'-d display_errors=1',
 					escapeshellarg(__FILE__)
 			)));
+		} else {
+			echo PHP_EOL;
 		}
 	}
 
