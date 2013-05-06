@@ -828,7 +828,7 @@
 				return;
 			}
 
-			if ($this->checkExecutionMode('development')) {
+			if ($this->checkExecutionMode(EXEC_MODE_DEVELOPMENT)) {
 				$display_errors = TRUE;
 
 			} else {
@@ -844,6 +844,7 @@
 
 				if (class_exists('Tracy\Debugger')) {
 					Debugger::enable(Debugger::DEVELOPMENT, $this->getWriteDirectory('logs'));
+					Debugger::$bar = NULL;
 				} else {
 					App\Core::enableErrorHandling('html');
 					App\Core::enableExceptionHandling('html', 'time');
@@ -854,8 +855,8 @@
 
 				if (isset($config['error_email_to'])) {
 					if (class_exists('Tracy\Debugger')) {
-						Debugger::$email = $config['error_email_to'];
 						Debugger::enable(Debugger::PRODUCTION, $this->getWriteDirectory('logs'));
+						Debugger::$email = $config['error_email_to'];
 					} else {
 						App\Core::enableErrorHandling($config['error_email_to']);
 						App\Core::enableExceptionHandling($config['error_email_to'], 'time');
