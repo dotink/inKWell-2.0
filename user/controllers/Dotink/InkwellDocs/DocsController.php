@@ -9,10 +9,12 @@
 	{
 		const DEFAULT_DOC_ROOT = 'external/docs';
 
+
 		/**
 		 *
 		 */
 		static public $docRoot = NULL;
+
 
 		/**
 		 *
