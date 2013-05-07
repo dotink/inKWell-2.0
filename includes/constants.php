@@ -51,6 +51,14 @@
 		'HTTP\REDIRECT_TEMPORARY' => 307, // Redirects with original method, assuming nothing done
 
 		//
+		// CACHE TYPES
+		//
+
+		'CACHE\PUBLIC'   => 'public',
+		'CACHE\PRIVATE'  => 'private',
+		'CACHE\NO_STORE' => 'no-store',
+
+		//
 		// REGULAR EXPRESSIONS
 		//
 
