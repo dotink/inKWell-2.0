@@ -769,9 +769,12 @@
 		 */
 		private function triggerContinue($message, $component)
 		{
-			$components  = func_get_args();
-			$message     = array_shift($components);
-			$this->log[] = vsprintf('Continue: ' . $message, $components);
+			$this->entry  = NULL;
+			$this->action = NULL;
+
+			$components   = func_get_args();
+			$message      = array_shift($components);
+			$this->log[]  = vsprintf('Continue: ' . $message, $components);
 
 			throw new Flourish\ContinueException(
 				'Error running route, continuing...'
