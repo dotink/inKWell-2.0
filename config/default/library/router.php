@@ -14,6 +14,12 @@
 		// added or removed
 		//
 
-		'restless' => FALSE
+		'restless' => FALSE,
+
+		//
+		// Set the word separator.
+		//
+
+		'word_separator' => '_'
 	]);
 }
