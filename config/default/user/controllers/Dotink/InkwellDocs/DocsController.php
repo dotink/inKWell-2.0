@@ -6,6 +6,12 @@
 
 		'@routing' => [
 			'actions' => [
+				'/error'    => function() {
+					throw new \Exception(
+						'Purposeful throwing of an uncaught exception to show Tracy output'
+					);
+				},
+
 				'/[*:path]' => 'Dotink\InkwellDocs\DocsController::show'
 			],
 			'handlers' => [

@@ -84,11 +84,13 @@ The `'methods'` key contains a simple list which allows you to map certain objec
 ]
 ```
 
-## Caching (Future) {#caching}
-
-**Note, inKWell currently caches views for mime-type resolution only in the event no type is specified, the features noted below are still in development.**
+## Caching {#caching}
 
 Working with the response cache is an easy way to improve the performance of your site.  In addition to setting the appropriate headers for clients, it provides an easy mechanism for sending a response ASAP.
+
+### Etags {#etags}
+
+Etags are completely transparent in inKWell and will be generated for every response.  If APC is enabled the response object will store the current etag along with the cache id of the response.  Upon additional requests if the client supplies the `If-None-Match` header, the etag will be checked against the generated version.  If these match the response body will not be rewritten to the server side cache and the response will be automatically converted to a `304` (Not Modified).
 
 ### Aging {#cache_aging}
 
@@ -140,7 +142,7 @@ $this['response']->setCache(CACHE\NO_STORE);
 
 The response will also respect the `no-store` setting as it may have been sent by the client.  That is to say, if specified in the request, it will refuse to store the response in the cache.
 
-### Sending a Cached Response {#sending_cached_responses}
+### Sending a Cached Response (Future) {#sending_cached_responses}
 
 You can automatically send a cached response by doing the following:
 
