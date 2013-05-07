@@ -19,6 +19,7 @@
 		const DEFAULT_CACHE_DIRECTORY = 'cache/responses';
 		const DEFAULT_RESPONSE        = HTTP\NOT_FOUND;
 		const DEFAULT_TYPE            = 'text/html';
+		const REGEX_AGING             = '#(\d+)\s*(years|weeks|days|hours|minutes|seconds)#i';
 
 		/**
 		 * Location of the cache directory
@@ -93,6 +94,51 @@
 		 * @var mixed
 		 */
 		protected $view = NULL;
+
+
+		/**
+		 * The max-age (in seconds) for which the response can be cached
+		 *
+		 * @access private
+		 * @var integer
+		 */
+		private $aging = NULL;
+
+
+		/**
+		 * The max-age (in seconds) for which the response can be cached by proxies/shared caches
+		 *
+		 * @access private
+		 * @var integer
+		 */
+		private $sharedAging = NULL;
+
+
+		/**
+		 * Whether or not we want to explicitly expire cached versions of this response
+		 *
+		 * @access private
+		 * @var boolean
+		 */
+		private $expireCache = FALSE;
+
+
+		/**
+		 * The cache control visibility, public, private, no-store
+		 *
+		 * @access private
+		 * @var string
+		 */
+		private $cacheVisibility = NULL;
+
+
+		/**
+		 * Whether or not we want to force re-validation by caches on this response
+		 *
+		 * @access private
+		 * @var boolean
+		 */
+		private $noCache = FALSE;
 
 
 		/**
@@ -291,6 +337,42 @@
 
 
 		/**
+		 * Converts an amount and textual string multipler to seconds
+		 *
+		 * @static
+		 * @access private
+		 * @param integer $amount The amount of time as an integer
+		 * @param string $multipler A string multipler, such as hours, minutes, seconds
+		 * @return integer The amount of time converted to seconds
+		 */
+		static private function convertAgingToSeconds($amount, $multiplier)
+		{
+			switch (strtolower($multiplier[0])) {
+				case 'y':
+					$multiplier = 60 * 60 * 24 * 365;
+					break;
+				case 'w':
+					$multiplier = 60 * 60 * 24 * 7;
+					break;
+				case 'd':
+					$multiplier = 60 * 60 * 24;
+					break;
+				case 'h':
+					$multiplier = 60 * 60;
+					break;
+				case 'm':
+					$multiplier = 60;
+					break;
+				case 's':
+					$multiplier = 1;
+					break;
+			}
+
+			return $amount * $multiplier;
+		}
+
+
+		/**
 		 * Generates or validates an etag in apc cache
 		 *
 		 * @static
@@ -376,7 +458,10 @@
 		/**
 		 * Checks the code on the response
 		 *
-		 *
+		 * @access public
+		 * @param integer $min A minimum code to match (exact match if only this is supplied)
+		 * @param integer $max A maximum code to match
+		 * @return boolean Whether or not the code matches or is within range
 		 */
 		public function checkCode($min = NULL, $max = NULL)
 		{
@@ -392,7 +477,8 @@
 		 * Checks the status on a response
 		 *
 		 * @access public
-		 * @return boolean
+		 * @param string $status The status to check
+		 * @return boolean Whether or not the current response status matches
 		 */
 		public function checkStatus($status)
 		{
@@ -401,10 +487,22 @@
 
 
 		/**
+		 * Expires cache by setting cache control max ages to 0
+		 *
+		 * @access public
+		 * @return void
+		 */
+		public function expire()
+		{
+			$this->expireCache = TRUE;
+		}
+
+
+		/**
 		 * Gets the code set on the response
 		 *
 		 * @access public
-		 * @return int The current HTTP code for the response
+		 * @return integer The current HTTP code for the response
 		 */
 		public function getCode()
 		{
@@ -588,6 +686,26 @@
 				}
 			}
 
+			if ($this->expireCache) {
+				$headers[] = sprintf('Cache-Control: max-age=0, s-maxage=0, must-revalidate');
+			} elseif ($this->aging) {
+				$cc_parts = ['must-revalidate', 'max-age=' . $this->aging];
+
+				if ($this->sharedAging) {
+					$cc_parts[] = 's-maxage=' . $this->sharedAging;
+				}
+
+				if ($this->cacheVisibility) {
+					$cc_parts[] = $this->cacheVisibility;
+				}
+
+				if ($this->noCache) {
+					$cc_parts[] = 'no-cache';
+				}
+
+				$headers[] = sprintf('Cache-Control: %s', implode(', ', $cc_parts));
+			}
+
 			foreach ($this->headers as $header => $value) {
 				if ($value !== NULL) {
 					$headers[] = $header . ': ' . $value;
@@ -609,6 +727,62 @@
 			}
 
 			return $this->code;
+		}
+
+
+		/**
+		 * Sets the cache aging on a response
+		 *
+		 * @access public
+		 * @param string $aging A string representation of the allowed aging, e.g. '4 hours'
+		 * @param string $shared_aging An alternative aging for shared caches or proxies
+		 * @return void
+		 */
+		public function setAging($aging, $shared_aging = NULL)
+		{
+			if (!preg_match(self::REGEX_AGING, $aging, $matches)) {
+				throw new Flourish\ProgrammerException(
+					'Invalid aging format %s specified',
+					$aging
+				);
+			}
+
+			$this->aging = self::convertAgingToSeconds($matches[1], $matches[2]);
+
+			if ($shared_aging) {
+				if (!preg_match(self::REGEX_AGING, $shared_aging, $matches)) {
+					throw new Flourish\ProgrammerException(
+						'Invalid shared aging format %s specified',
+						$aging
+					);
+				}
+
+				$this->sharedAging = self::convertAgingToSeconds($matches[1], $matches[2]);
+			}
+		}
+
+
+		/**
+		 * Sets the allowed cache visibility
+		 *
+		 * @access public
+		 * @param string $visibility The allowed visibility of the cached response, e.g. 'public'
+		 * @param boolean $no_cache Whether or not the cache must re-validate with origin
+		 * @return void
+		 */
+		public function setCache($visibility, $no_cache = FALSE)
+		{
+			$visibility = strtolower($visibility);
+
+			if (!in_array($visibility, ['public', 'private', 'no-store'])) {
+				throw new Flourish\ProgrammerException(
+					'Invalid cache visibility %s specified',
+					$visibility
+				);
+			}
+
+			$this->cacheVisibility = $visibility;
+			$this->noCache         = (bool) $no_cache;
 		}
 
 
@@ -647,7 +821,7 @@
 		 * Caches a file for the current unique URL using the data type as part of its id.
 		 *
 		 * @access private
-		 * @param string $etag
+		 * @param string $etag The current etag, will be replaced if new etag is generated
 		 * @return App\File
 		 */
 		private function cache(&$etag)
