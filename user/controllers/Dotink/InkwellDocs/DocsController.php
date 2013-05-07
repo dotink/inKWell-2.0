@@ -68,7 +68,7 @@
 		 */
 		public function show($path = '/')
 		{
-			$path = $this['request']->getURL()->getPath();
+			$path = '/' . $this['request']->get('path', 'string', NULL);
 
 			if ($path[strlen($path) - 1] == '/') {
 				$path .= 'index';
