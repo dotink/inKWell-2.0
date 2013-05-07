@@ -19,7 +19,7 @@
 		const DEFAULT_CACHE_DIRECTORY = 'cache/responses';
 		const DEFAULT_RESPONSE        = HTTP\NOT_FOUND;
 		const DEFAULT_TYPE            = 'text/html';
-		const REGEX_AGING             = '#(\d+)\s*(years|weeks|days|hours|minutes|seconds)#i';
+		const REGEX_AGING             = '#(\d+)\s*(year|week|day|hour|minute|second)(?:s?)#i';
 
 		/**
 		 * Location of the cache directory
