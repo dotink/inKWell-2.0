@@ -265,11 +265,15 @@
 		 */
 		static private function wordSeparatorToUndercore($value)
 		{
-			if (self::$wordSeparator == '_' || strpos($value, '_') !== FALSE) {
+			if (self::$wordSeparator == '_') {
 				return $value;
-			}
 
-			return str_replace(self::$wordSeparator, '_', $value);
+			} elseif (strpos($value, '_') !== FALSE) {
+				return str_replace('_', self::$wordSeparator, $value);
+
+			} else {
+				return str_replace(self::$wordSeparator, '_', $value);
+			}
 		}
 
 
