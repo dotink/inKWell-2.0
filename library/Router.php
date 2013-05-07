@@ -509,11 +509,7 @@
 							$request->set($key, $value);
 						}
 
-						$this->emit('beginAction', $request);
-
 						$response = $this->captureResponse($action, $request, $response);
-
-						$this->emit('endAction', $response);
 
 						break;
 
@@ -548,12 +544,16 @@
 		{
 			$action = $this->parseAction($action);
 
+			$this->emit('beginAction', $request);
+
 			ob_start();
 
 			$action_response   = self::callAction($this, $action, $request, $response);
 			$resolved_response = ($output = ob_get_clean())
 				? $response(HTTP\OK, NULL, [], $output)
 				: $response->resolve($action_response);
+
+			$this->emit('endAction', $resolved_response);
 
 			return $resolved_response;
 		}
