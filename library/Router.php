@@ -52,6 +52,16 @@
 
 
 		/**
+		 * The word separator
+		 *
+		 * @static
+		 * @access private
+		 * @var string
+		 */
+		static private $wordSeparator = NULL;
+
+
+		/**
 		 * The current action controller
 		 *
 		 * @access private
@@ -126,6 +136,10 @@
 			if (isset($config['restless']) && $config['restless']) {
 				self::$restless = TRUE;
 			}
+
+			self::$wordSeparator = isset($config['word_separator'])
+				? $config['word_separator']
+				: '_';
 		}
 
 
@@ -211,15 +225,19 @@
 						case NULL:
 							break;
 						case 'uc':
-							$value = str_replace('-', '_', $value);
+							$value = self::wordSeparatorToUndercore($value);
 							$value = App\Text::create($value)->camelize(TRUE);
 							break;
 						case 'lc':
-							$value = str_replace('-', '_', $value);
+							$value = self::wordSeparatorToUndercore($value);
 							$value = App\Text::create($value)->camelize();
 							break;
 						case 'us':
 							$value = App\Text::create($value)->underscorize();
+							break;
+						case 'ws':
+							$value = App\Text::create($value)->underscorize();
+							$value = str_replace('_', self::$wordSeparator, $value);
 							break;
 						default:
 							throw new Flourish\ProgrammerException(
@@ -233,15 +251,25 @@
 				}
 			}
 
-			if (strpos($route, '::') !== FALSE) {
-				$parts = explode('::', $route);
+			return $route;
+		}
 
-				if (count($parts) == 2) {
-					$route = $parts;
-				}
+
+		/**
+		 * Translate the word separator to undscores
+		 *
+		 * @static
+		 * @access private
+		 * @param string $value The original value
+		 * @return string The value with word separator translated to underscores
+		 */
+		static private function wordSeparatorToUndercore($value)
+		{
+			if (self::$wordSeparator == '_' || strpos($value, '_') !== FALSE) {
+				return $value;
 			}
 
-			return $route;
+			return str_replace(self::$wordSeparator, '_', $value);
 		}
 
 
@@ -514,6 +542,8 @@
 		 */
 		private function captureResponse($action, $request, $response)
 		{
+			$action = $this->parseAction($action);
+
 			ob_start();
 
 			$action_response   = self::callAction($this, $action, $request, $response);
@@ -678,7 +708,7 @@
 
 				if (!$this->entry) {
 					$this->action = $method;
-					$this->entry       = $class;
+					$this->entry  = $class;
 				}
 
 				return [$class, $method];
