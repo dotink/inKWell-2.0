@@ -829,6 +829,7 @@
 			$this->children['databases'] = $this->create('dbmanager');
 
 			foreach ($configs as $element_id => $database_config) {
+
 				if (isset($database_config['connections'])) {
 
 					$connections = $database_config['connections'];
@@ -842,7 +843,7 @@
 							continue;
 						}
 
-						$this['databases']->add($name, $connection-config);
+						$this['databases']->add($name, $connection_config);
 					}
 				}
 			}
