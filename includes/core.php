@@ -456,7 +456,8 @@
 				$this->writeDirectory = $write_directory;
 			}
 
-			$this->configDebugging($config);
+			$this->configDebugging();
+			$this->configDatabases();
 
 			return $this;
 		}
@@ -807,14 +808,57 @@
 
 
 		/**
-		 * Configures debugging for inKwell
+		 * Configures databases for inKWell
 		 *
 		 * @access private
-		 * @param array $config The inKWell configuration
 		 * @return void
 		 */
-		private function configDebugging($config)
+		private function configDatabases()
 		{
+			$configs      = $this['config']->getByType('array', '@database');
+			$root_element = $this['config']->elementize('@database');
+
+			if (isset($configs[$root_element])) {
+				$root_config = $configs[$root_element];
+
+				if (isset($root_config['disabled']) && $root_config['disabled']) {
+					return;
+				}
+			}
+
+			$this->children['databases'] = $this->create('dbmanager');
+
+			foreach ($configs as $element_id => $database_config) {
+				if (isset($database_config['connections'])) {
+
+					$connections = $database_config['connections'];
+
+					if (!is_array($connections) || !count($connections)) {
+						continue;
+					}
+
+					foreach ($connections as $name => $connection_config) {
+						if (!isset($connection_config['driver'])) {
+							continue;
+						}
+
+						$this['databases']->add($name, $connection-config);
+					}
+				}
+			}
+		}
+
+
+		/**
+		 * Configures debugging for inKWell
+		 *
+		 * @access private
+		 * @return void
+		 */
+		private function configDebugging()
+		{
+			$config = $this['config']->get('array', '@inkwell');
+
 			if (isset($config['error_level'])) {
 				error_reporting($config['error_level']);
 			}
