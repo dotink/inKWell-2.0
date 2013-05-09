@@ -43,6 +43,7 @@
 	$app->register('response',   'Dotink\Inkwell\Response');
 	$app->register('router',     'Dotink\Inkwell\Router');
 	$app->register('scaffolder', 'Dotink\Inkwell\Scaffolder');
+	$app->register('dbmanager',  'Dotink\Dub\DatabaseManager');
 
 	//
 	// Include configuration logic and return the app
