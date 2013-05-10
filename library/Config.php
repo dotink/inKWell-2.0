@@ -51,12 +51,12 @@
 
 
 		/**
-		 * Element Translations
+		 * Element Map
 		 *
 		 * @access private
 		 * @var array
 		 */
-		private $elementTranslations = array();
+		private $elementMap = array();
 
 
 		/**
@@ -143,11 +143,11 @@
 		 */
 		public function classize($element)
 		{
-			if (!isset($this->elementTranslations[$element])) {
+			if (!isset($this->elementMap[$element])) {
 				return NULL;
 			}
 
-			return $this->elementTranslations[$element];
+			return $this->elementMap[$element];
 		}
 
 
@@ -160,7 +160,7 @@
 		 */
 		public function elementize($class)
 		{
-			if (!($element = array_search($class, $this->elementTranslations))) {
+			if (!($element = array_search($class, $this->elementMap))) {
 				return NULL;
 			}
 
@@ -283,7 +283,7 @@
 
 			if (!preg_match(REGEX\ABSOLUTE_PATH, $directory)) {
 				throw new Flourish\ProgrammerException(
-					'Directory "%s" is invalide, must be absolute path',
+					'Directory "%s" is invalid, must be absolute path',
 					$directory
 				);
 			}
@@ -324,7 +324,7 @@
 		{
 			$element_id = self::generateElementId($config_path);
 
-			if (isset($this->elementTranslations[$element_id])) {
+			if (isset($this->elementMap[$element_id])) {
 				throw new Flourish\ProgrammerException(
 					'Cannot map class "%s" to element id "%s", already mapped',
 					$class,
@@ -332,7 +332,7 @@
 				);
 			}
 
-			$this->elementTranslations[$element_id] = $class;
+			$this->elementMap[$element_id] = $class;
 		}
 
 
@@ -433,10 +433,24 @@
 			if ($depth == 0 && $this->name !== self::DEFAULT_CONFIG) {
 				try {
 					$root_directory = dirname($this->configPath);
-					$default_config = new Config(self::DEFAULT_CONFIG);
-					$this->data     = array_replace_recursive(
-						$default_config->build($root_directory)->data,
+					$default_config = new Config();
+
+					//
+					// Merge configuration data
+					//
+
+					$this->data = array_replace_recursive(
+						$default_config->load($root_directory)->data,
 						$this->data
+					);
+
+					//
+					// Merge element maps
+					//
+
+					$this->elementMap = array_merge(
+						$default_config->elementMap,
+						$this->elementMap
 					);
 
 				} catch (Flourish\Exception $e){
