@@ -348,59 +348,6 @@
 			$this->addRoot('config', $configuration_root_dir);
 			$this->children['config']->load($this->getRoot('config'), $configuration_name);
 
-			$config = $this->children['config'];
-
-			//
-			// Set up our libraries.
-			//
-
-			foreach ($config->getByType('array', 'Library') as $element_id => $library_config) {
-				$class    = $config->classize($element_id);
-				$autoload = !empty($library_config['auto_load']);
-
-				if (!$class) {
-					throw new Flourish\ProgrammerException(
-						'Library %s must define a `class` configuration element',
-						$element_id
-					);
-				}
-
-				if (isset($library_config['root_directory'])) {
-					$this->addRoot($element_id, $library_config['root_directory']);
-
-					if ($autoload) {
-						$this->addLoadingMap($class, 'IW: ' . $library_config['root_directory']);
-					}
-
-				} elseif ($autoload) {
-					throw new Flourish\ProgrammerException(
-						'Autoloading for class %s enabled, but no `root_directory` defined',
-						$class
-					);
-				}
-			}
-
-			//
-			// Set up our autoloaders
-			//
-
-			foreach ($config->getByType('array', '@autoloading') as $autoloading_config) {
-
-				settype($autoloading_config['standards'], 'array');
-				settype($autoloading_config['map'], 'array');
-
-				foreach ($autoloading_config['standards'] as $standard => $transform_callback) {
-					$this->addLoadingStandard($standard, $transform_callback);
-				}
-
-				$this->loaders = array_merge($this->loaders, $autoloading_config['map']);
-			}
-
-
-			//
-			// From this point forward we only need the inkwell root config
-			//
-
 			$config = $this['config']->get('array', '@inkwell');
 
 			//
@@ -458,6 +405,52 @@
 
 			$this->configDebugging();
 			$this->configDatabases();
+
+			//
+			// Set up our libraries.
+			//
+
+			foreach ($this['config']->getByType('array', 'Library') as $eid => $library_config) {
+				$class    = $this['config']->classize($eid);
+				$autoload = !empty($library_config['auto_load']);
+
+				if (!$class) {
+					throw new Flourish\ProgrammerException(
+						'Library %s must define a `class` configuration element',
+						$eid
+					);
+				}
+
+				if (isset($library_config['root_directory'])) {
+					$this->addRoot($eid, $library_config['root_directory']);
+
+					if ($autoload) {
+						$this->addLoadingMap($class, 'IW: ' . $library_config['root_directory']);
+					}
+
+				} elseif ($autoload) {
+					throw new Flourish\ProgrammerException(
+						'Autoloading for class %s enabled, but no `root_directory` defined',
+						$class
+					);
+				}
+			}
+
+			//
+			// Set up our autoloaders
+			//
+
+			foreach ($this['config']->getByType('array', '@autoloading') as $autoloading_config) {
+
+				settype($autoloading_config['standards'], 'array');
+				settype($autoloading_config['map'], 'array');
+
+				foreach ($autoloading_config['standards'] as $standard => $transform_callback) {
+					$this->addLoadingStandard($standard, $transform_callback);
+				}
+
+				$this->loaders = array_merge($this->loaders, $autoloading_config['map']);
+			}
 
 			return $this;
 		}
@@ -828,7 +821,7 @@
 
 			$this->children['databases'] = $this->create('dbmanager');
 
-			foreach ($configs as $element_id => $database_config) {
+			foreach ($configs as $eid => $database_config) {
 
 				if (isset($database_config['connections'])) {
 

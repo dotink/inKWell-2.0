@@ -22,7 +22,6 @@
 
 	$app = new IW(realpath(dirname(__DIR__)));
 
-
 	//
 	// Our initial loader map is established.  This will use compatibility transformations,
 	// meaning that namespaces will be ignored when loading the classes.
