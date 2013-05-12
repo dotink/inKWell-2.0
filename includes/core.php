@@ -602,8 +602,6 @@
 		 */
 		public function loadClass($class, Array $loaders = array())
 		{
-			echo $class . "\n";
-
 			if (isset($this->aliases[$class])) {
 				if (class_exists($this->aliases[$class])) {
 					class_alias($this->aliases[$class], $class);
