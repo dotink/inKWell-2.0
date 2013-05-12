@@ -36,6 +36,14 @@
 
 
 		/**
+		 * Tracks open matchers to avoid recursion if they need a class
+		 *
+		 * @var array
+		 */
+		static private $openMatchers = array();
+
+
+		/**
 		 * A list of just-in-time aliases for the autoloader
 		 *
 		 * @access private
@@ -594,10 +602,15 @@
 		 */
 		public function loadClass($class, Array $loaders = array())
 		{
+			echo $class . "\n";
+
 			if (isset($this->aliases[$class])) {
-				if ($this->loadClass($this->aliases[$class], $loaders)) {
+				if (class_exists($this->aliases[$class])) {
 					class_alias($this->aliases[$class], $class);
+					return TRUE;
 				}
+
+				return FALSE;
 			}
 
 			if (!count($loaders)) {
@@ -607,58 +620,62 @@
 			foreach ($loaders as $test => $target) {
 				if (strpos($test, '*') !== FALSE) {
 					$regex = str_replace('*', '.*', str_replace('\\', '\\\\', $test));
-					$match = preg_match('#^' . $regex . '$#', $class);
-				} elseif (class_exists($test)) {
-					$test  = [$test, self::MATCH_CLASS_METHOD];
-					$match = is_callable($test) ? call_user_func($test, $class) : FALSE;
-				} else {
-					$match = TRUE;
-				}
 
-				if (class_exists($class, FALSE)) {
-
-					//
-					// Prevent recursive autoloads from going too far
-					//
-
-					return TRUE;
-
-				} elseif ($match) {
-
-					$target = explode(':', $target, 2);
-
-					if (count($target) == 1) {
-						$standard = NULL;
-						$target   = trim($target[0]);
-					} else {
-						$standard = trim($target[0]);
-						$target   = trim($target[1]);
+					if (!preg_match('#^' . $regex . '$#', $class)) {
+						continue;
 					}
 
-					$base_dir     = trim($target, '/\\' . DS);
-					$class_path   = $this->transformClassToPath($class, $standard);
-					$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
+				} elseif (class_exists($test)) {
+					if (isset(self::$openMatchers[$test])) {
+						continue;
+					}
 
-					if (file_exists($include_file)) {
+					$match_callback = [$test, self::MATCH_CLASS_METHOD];
 
-						include_once $include_file;
+					if (is_callable($match_callback)) {
+						self::$openMatchers[$test] = TRUE;
 
-						if (class_exists($class, FALSE)) {
+						if (!call_user_func($match_callback, $class)) {
+							unset(self::$openMatchers[$test]);
+							continue;
+						} else {
+							unset(self::$openMatchers[$test]);
+						}
+					}
+				}
 
-							//
-							// Map any available configuration to this class
-							//
+				$target = explode(':', $target, 2);
 
-							if (isset($this['config'])) {
-								if (!$this['config']->elementize($class)) {
-									$this['config']->map($class, $base_dir . DS . $class_path);
-								}
+				if (count($target) == 1) {
+					$standard = NULL;
+					$target   = trim($target[0]);
+				} else {
+					$standard = trim($target[0]);
+					$target   = trim($target[1]);
+				}
 
-								if (is_array($interfaces = class_implements($class, FALSE))) {
-									return (in_array('Dotink\Interfaces\Inkwell', $interfaces))
-										? $this->initializeClass($class)
-										: TRUE;
-								}
+				$base_dir     = trim($target, '/\\' . DS);
+				$class_path   = $this->transformClassToPath($class, $standard);
+				$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
+
+				if (file_exists($include_file)) {
+					include_once $include_file;
+
+					if (class_exists($class, FALSE)) {
+
+						//
+						// Map any available configuration to this class
+						//
+
+						if (isset($this['config'])) {
+							if (!$this['config']->elementize($class)) {
+								$this['config']->map($class, $base_dir . DS . $class_path);
+							}
+
+							if (is_array($interfaces = class_implements($class, FALSE))) {
+								return (in_array('Dotink\Interfaces\Inkwell', $interfaces))
+									? $this->initializeClass($class)
+									: TRUE;
 							}
 						}
 					}
@@ -823,20 +840,24 @@
 
 			foreach ($configs as $eid => $database_config) {
 
-				if (isset($database_config['connections'])) {
+				if (isset($database_config['map'])) {
 
-					$connections = $database_config['connections'];
+					$map = $database_config['map'];
 
-					if (!is_array($connections) || !count($connections)) {
+					if (!is_array($map) || !count($map)) {
 						continue;
 					}
 
-					foreach ($connections as $name => $connection_config) {
-						if (!isset($connection_config['driver'])) {
+					foreach ($map as $name => $map_config) {
+						if (!isset($map_config['connection']['driver'])) {
 							continue;
 						}
 
-						$this['databases']->add($name, $connection_config);
+						$namespace = isset($map_config['namespace'])
+							? $map_config['namespace']
+							: NULL;
+
+						$this['databases']->add($name, $map_config['connection'], $namespace);
 					}
 				}
 			}
