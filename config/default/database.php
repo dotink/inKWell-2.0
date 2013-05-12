@@ -4,7 +4,7 @@
 
 		'disabled' => FALSE,
 
-		'connections' => [
+		'map' => [
 
 			//
 			//
@@ -13,43 +13,38 @@
 			'default' => [
 
 				//
-				// Valid Drivers:
-				// - pdo_sqlite
-				// - pdo_mysql
-				// - pdo_pgsql
-				// - pdo_oci / oci8
-				// - pdo_sqlsrv
+				// The namespace of models associated with this database as well as the namespace
+				// where proxies will be stored.
 				//
 
-				'driver' => NULL,
-				'dbname' => NULL,
+				'namespace' => NULL,
+				'connection' => [
 
-				//
-				// The path (string) or memory (boolean) settings are used in place of dbname,
-				// host, and port for pdo_sqlite.
-				//
-				// 'memory' => TRUE,
-				// 'path'   => NULL,
-				//
+					//
+					// Valid Drivers: pdo_sqlite, pdo_mysql, pdo_pgsql, pdo_oci, pdo_sqlsrv
+					//
 
-				'host' => NULL,
-				'port' => NULL,
+					'driver' => NULL,
+					'dbname' => NULL,
+					'host'   => NULL,
+					'port'   => NULL,
 
-				//
-				// You can use unix_socket for pdo_mysql instead of host/port
-				//
-				// 'unix_socket' => NULL,
-				//
+					//
+					// The path (string) or memory (boolean) settings are used in place of dbname,
+					// host, and port for pdo_sqlite.
+					//
+					// 'memory' => TRUE,
+					// 'path'   => NULL,
+					//
+					// For pdo_mysql you can use a unix socket path instead of host and port
+					//
+					// 'unix_socket' => NULL,
+					//
 
-				'user'     => NULL,
-				'password' => NULL,
-
-				//
-				// The charset parameter is support for pdo_mysql and pdo_oci / oci8
-				//
-				// 'charset' => 'utf-8'
-				//
-
+					'user'     => NULL,
+					'password' => NULL,
+					'charset'  => 'utf-8'
+				]
 			],
 		],
 	]);

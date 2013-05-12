@@ -20,7 +20,13 @@
 		/**
 		 *
 		 */
-		static private $dynamicLoading = FALSE;
+		static private $databases = array();
+
+
+		/**
+		 *
+		 */
+		static private $namespaces = array();
 
 
 		/**
@@ -28,37 +34,86 @@
 		 */
 		static public function __init($app, Array $config = array())
 		{
-			foreach ($app['config']->getByType('array', 'model') as $eid => $model_config) {
-				if (isset($model_config['class']) && isset($model_config['auto_map'])) {
-					if (!$model_config['auto_map']) {
-						continue;
-					}
+			self::$databases = $app['databases'];
 
-					if (strpos($model_config['auto_map'], '::') !== FALSE) {
-						$auto_map_parts = explode('::', $model_config['auto_map']);
-						$database_name  = $auto_map_parts[0];
-						$repository     = $auto_map_parts[1];
-
-					} else {
-						$database_name  = 'default';
-						$repository     = $model_config['auto_map'];
-					}
-
-					if (!isset($app['databases'][$database_name])) {
-						continue;
-					}
-
-					$mapping = $app['databases']->reflectSchema($database_name, $repository);
-
-					parent::configure($model_config['class'], $mapping);
-
-					if (!self::$dynamicLoading) {
-						spl_autoload_register('Dotink\Dub\Model::dynamicLoader');
-
-						self::$dynamicLoading = TRUE;
-					}
+			foreach ($app['config']->getByType('array', 'Model') as $eid => $model_config) {
+				if (!isset($model_config['class'])) {
+					continue;
 				}
+
+				if (empty($model_config['reflect'])) {
+					if (isset($model_config['schema'])) {
+						Dub\ModelConfiguration::store(
+							$model_config['class'],
+							$model_config['schema']
+						);
+					}
+
+					continue;
+				}
+
+				$database_name = $model_config['reflect'];
+
+				if (!isset(self::$databases[$database_name])) {
+					throw new Flourish\ProgrammerException(
+						'Cannot reflect model %s to database %s, database not configured',
+						$model_config['class'],
+						$database_name
+					);
+				}
+
+				if (empty($model_config['schema']['repo'])) {
+					$class_parts = explode('\\', $model_config['class']);
+					$short_name  = end($class_parts);
+					$namespace   = implode('\\', $class_parts);
+
+					$repository = Dub\ModelConfiguration::makeRepositoryName($short_name);
+
+				} else {
+					$repository = $model_config['schema']['repo'];
+				}
+
+				Dub\ModelConfiguration::reflect(
+					$model_config['class'],
+					self::$databases[$database_name],
+					$repository
+				);
 			}
+		}
+
+
+		/**
+		 *
+		 */
+		static public function __match($class)
+		{
+			try {
+				Dub\ModelConfiguration::load($class);
+
+				return TRUE;
+			} catch (Flourish\EnvironmentException $e) {}
+
+			$class_parts = explode('\\', $class);
+			$short_name  = end($class_parts);
+			$namespace   = implode('\\', $class_parts);
+
+			if (!($database = self::$databases->lookup($namespace))) {
+				$database = 'default';
+			}
+
+			if (isset(self::$databases[$database])) {
+				$connection = self::$databases[$database]->getConnection();
+				$schema     = $connection->getSchemaManager();
+				$repository = Dub\ModelConfiguration::makeRepositoryName($short_name);
+
+				$available  = array_map(function($table) {
+					return $table->getName();
+				}, $schema->listTables());
+
+				return in_array($repository, $available);
+			}
+
+			return FALSE;
 		}
 
 
@@ -72,5 +127,136 @@
 				$builder->setMappedSuperclass();
 			}
 		}
+
+
+		/**
+		 *
+		 */
+		static private function callOn($database, $action, $callback) {
+			if (!isset(self::$databases[$database])) {
+				throw new Flourish\ProgrammerException(
+					'Cannot %s on model of type %s on %s database, no such database',
+					$action, get_class($this), $database
+				);
+			}
+
+			$callback(self::$databases[$database]);
+		}
+
+
+		/**
+		 *
+		 */
+		static private function iterateOn($databases, $action, $callback) {
+			foreach ($databases as $database) {
+				if (!isset(self::$databases[$database])) {
+					throw new Flourish\ProgrammerException(
+						'Cannot %s model of type %s on %s database, no such database',
+						$action, get_class($this), $database
+					);
+				}
+
+				$callback(self::$databases[$database]);
+			}
+		}
+
+
+		/**
+		 *
+		 */
+		static private function resolveDatabase($database, $model)
+		{
+			if (!empty($database)) {
+				return $database;
+			}
+
+			$model_class     = get_class($model);
+			$model_namespace = !isset(self::$namespaces[$model_class])
+				? implode('\\', array_slice(explode('\\', $model_class), 0, -1))
+				: self::$namespaces[$model_class];
+
+			return $database = self::$databases->lookup($model_namespace)
+				? $database
+				: 'default';
+		}
+
+
+		/**
+		 *
+		 */
+		public function isDetached($database = NULL)
+		{
+			$database = self::resolveDatabase($database, $this);
+
+			self::callOn($database, 'check if state is detached', function($database) {
+				parent::isDetached($database);
+			});
+		}
+
+
+		/**
+		 *
+		 */
+		public function isManaged($database = NULL)
+		{
+			$database = self::resolveDatabase($database, $this);
+
+			self::callOn($database, 'check if state is managed', function($database) {
+				parent::isManaged($database);
+			});
+		}
+
+
+		/**
+		 *
+		 */
+		public function isNew($database = NULL)
+		{
+			$database = self::resolveDatabase($database, $this);
+
+			self::callOn($database, 'check if state is new', function($database) {
+				parent::isNew($database);
+			});
+		}
+
+
+		/**
+		 *
+		 */
+		public function isRemoved($database = NULL)
+		{
+			$database = self::resolveDatabase($database, $this);
+
+			self::callOn($database, 'check if state is removed', function($database) {
+				parent::isRemoved($database);
+			});
+		}
+
+
+		/**
+		 *
+		 */
+		public function store($database = NULL)
+		{
+			$databases = self::resolveDatabase(func_get_args(), $this);
+
+			self::iterateOn($databases, __FUNCTION__, function($database) {
+				parent::store($database);
+			});
+		}
+
+
+		/**
+		 *
+		 */
+		public function remove($database = NULL)
+		{
+			$databases = self::resolveDatabase(func_get_args(), $this);
+
+			self::iterateOn($databases, __FUNCTION__, function($database) {
+				parent::remove($database);
+			});
+		}
+
 	}
 }

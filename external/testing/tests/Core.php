@@ -7,8 +7,6 @@
 
 		'setup' => function($data) {
 			needs($data['root'] . DS . 'includes/core.php');
-
-			Mime::define('App\Text');
 		},
 
 		'cleanup' => function($config) {
@@ -22,22 +20,21 @@
 			//
 
 			'transformClassToIW()' => function($config) {
-
-				Mime::create('App\Text')
-					-> onCall('create')
-					-> expect('Vendor' . DS . 'Project')
-					-> give(function($mime) {
-						return $mime->onCall('underscorize')->give('vendor' . DS . 'project')
-							-> resolve();
-					});
-
 				assert('Dotink\Inkwell\IW::transformClassToIW')
 					-> with('\Vendor\Project\Class')
-					-> equals('vendor/project/Class.php');
+					-> equals('Vendor/Project/Class.php');
 
 				assert('Dotink\Inkwell\IW::transformClassToIW')
-					-> with('Vendor\Project\Class')
-					-> equals('vendor/project/Class.php');
+					-> with('Vendor\Project\ClassException')
+					-> equals('Vendor/Project/Exceptions/ClassException.php');
+
+				assert('Dotink\Inkwell\IW::transformClassToIW')
+					-> with('Vendor\Project\ClassTrait')
+					-> equals('Vendor/Project/Traits/ClassTrait.php');
+
+				assert('Dotink\Inkwell\IW::transformClassToIW')
+					-> with('Vendor\Project\ClassInterface')
+					-> equals('Vendor/Project/Interfaces/ClassInterface.php');
 
 			},
 
