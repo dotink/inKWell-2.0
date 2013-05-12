@@ -25,7 +25,7 @@
 		"dotink/container-trait": "dev-master",
 		"dotink/emitter-trait": "dev-master",
 		"dotink/actioncaller-trait": "dev-master",
-		"kriswallsmith/assetic": "1.1.*@dev"
+		"kriswallsmith/assetic": "dev-master"
 	},
 	"extra": {
 		"opus": {
