@@ -4,6 +4,7 @@
 	use Dotink\Dub;
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
+	use Dotink\Dub\ModelConfiguration;
 
 	/**
 	 * Model class responsible for ownage
@@ -43,7 +44,7 @@
 
 				if (empty($model_config['reflect'])) {
 					if (isset($model_config['schema'])) {
-						Dub\ModelConfiguration::store(
+						ModelConfiguration::store(
 							$model_config['class'],
 							$model_config['schema']
 						);
@@ -64,16 +65,16 @@
 
 				if (empty($model_config['schema']['repo'])) {
 					$class_parts = explode('\\', $model_config['class']);
-					$short_name  = end($class_parts);
+					$short_name  = array_pop($class_parts);
 					$namespace   = implode('\\', $class_parts);
 
-					$repository = Dub\ModelConfiguration::makeRepositoryName($short_name);
+					$repository = ModelConfiguration::makeRepositoryName($short_name);
 
 				} else {
 					$repository = $model_config['schema']['repo'];
 				}
 
-				Dub\ModelConfiguration::reflect(
+				ModelConfiguration::reflect(
 					$model_config['class'],
 					self::$databases[$database_name],
 					$repository
@@ -85,33 +86,44 @@
 		/**
 		 *
 		 */
+		static public function __make($scaffolder)
+		{
+			$class = $scaffolder->getClass();
+
+			try {
+				$config = ModelConfiguration::load($class);
+			} catch (Flourish\EnvironmentException $e) {
+				if (!self::search($class, $database, $repository)) {
+					return FALSE;
+				}
+
+				$database = self::$databases[$database];
+				$config   = ModelConfiguration::reflect($class, $database, $repository);
+			}
+
+			return $scaffolder
+				-> setTemplate('classes/Dotink/Inkwell/Model')
+				-> make([
+					'fields' => $config->getFields()
+				]);
+		}
+
+
+		/**
+		 *
+		 */
 		static public function __match($class)
 		{
 			try {
-				Dub\ModelConfiguration::load($class);
-
+				ModelConfiguration::load($class);
 				return TRUE;
 			} catch (Flourish\EnvironmentException $e) {}
 
-			$class_parts = explode('\\', $class);
-			$short_name  = end($class_parts);
-			$namespace   = implode('\\', $class_parts);
-
-			if (!($database = self::$databases->lookup($namespace))) {
-				$database = 'default';
+			if (!self::$databases) {
+				return FALSE;
 			}
 
-			if (isset(self::$databases[$database])) {
-				$connection = self::$databases[$database]->getConnection();
-				$schema     = $connection->getSchemaManager();
-				$repository = Dub\ModelConfiguration::makeRepositoryName($short_name);
-
-				$available  = array_map(function($table) {
-					return $table->getName();
-				}, $schema->listTables());
-
-				return in_array($repository, $available);
-			}
+			return self::search($class);
 
 			return FALSE;
 		}
@@ -126,6 +138,42 @@
 			if ($class == __CLASS__) {
 				$builder->setMappedSuperclass();
 			}
+		}
+
+
+		/**
+		 *
+		 */
+		static public function search($class, &$database = NULL, &$repository = NULL)
+		{
+			$class_parts = explode('\\', $class);
+			$short_name  = array_pop($class_parts);
+			$namespace   = implode('\\', $class_parts);
+
+			if (!$database) {
+				$database = self::$databases->lookup($namespace);
+			}
+
+			if (!$database) {
+				$database = 'default';
+			}
+
+			if (isset(self::$databases[$database])) {
+				$connection = self::$databases[$database]->getConnection();
+				$schema     = $connection->getSchemaManager();
+
+				if (!$repository) {
+					$repository = ModelConfiguration::makeRepositoryName($short_name);
+				}
+
+				$available = array_map(function($table) {
+					return $table->getName();
+				}, $schema->listTables());
+
+				return in_array($repository, $available);
+			}
+
+			return FALSE;
 		}
 
 

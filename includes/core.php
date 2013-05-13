@@ -23,7 +23,8 @@
 		const MAGIC_NAMESPACE          = 'App';
 
 		const INITIALIZATION_METHOD    = '__init';
-		const MATCH_CLASS_METHOD       = '__match';
+		const MATCH_METHOD             = '__match';
+		const MAKE_METHOD              = '__make';
 
 		const DEFAULT_CONFIG_DIRECTORY = 'config';
 		const DEFAULT_WRITE_DIRECTORY  = 'assets';
@@ -344,42 +345,45 @@
 		 * Configure our application
 		 *
 		 * @access public
-		 * @param string $configuration_name The name of the config to use, NULL is default
-		 * @param string $configuration_root_dir The configuration root directory
+		 * @param string $config_name The name of the config to use, NULL is default
+		 * @param string $config_root The configuration root directory
 		 * @return IW The application for chaining
 		 */
-		public function config($configuration_name = NULL, $configuration_root_dir = NULL)
+		public function config($config_name = NULL, $config_root = NULL)
 		{
-			$this->children['config'] = $this->create('config', [self::CONFIG_INTERFACE]);
-			$configuration_root_dir   = $configuration_root_dir ?: self::DEFAULT_CONFIG_DIRECTORY;
+			$this->addRoot('config', $config_root ?: self::DEFAULT_CONFIG_DIRECTORY);
 
-			$this->addRoot('config', $configuration_root_dir);
-			$this->children['config']->load($this->getRoot('config'), $configuration_name);
+			$config = $this->children['config'] = $this
+				 -> create('config', [self::CONFIG_INTERFACE])
+				 -> load($this->getRoot('config'), $config_name)
+			;
 
-			$config = $this['config']->get('array', '@inkwell');
+			$app_config = $config->get('array', '@inkwell');
 
 			//
-			// Set up Aliases
+			// Set up aliases and configure autoloading
 			//
 
-			if (isset($config['aliases'])) {
-				foreach ($config['aliases'] as $alias => $class) {
+			if (isset($app_config['aliases'])) {
+				foreach ($app_config['aliases'] as $alias => $class) {
 					$this->aliases[self::MAGIC_NAMESPACE .  '\\' . $alias] = $class;
 				}
 			}
+
+			$this->configAutoloading($config);
 
 			//
 			// Initialize Date and Time Information, this has to be before any
 			// time related functions.
 			//
 
-			App\Timestamp::setDefaultTimezone(isset($config['default_timezone'])
-				? $config['default_timezone']
+			App\Timestamp::setDefaultTimezone(isset($app_config['default_timezone'])
+				? $app_config['default_timezone']
 				: 'GMT'
 			);
 
-			if (isset($config['date_formats']) && is_array($config['date_formats'])) {
-				foreach ($config['date_formats'] as $name => $format) {
+			if (isset($app_config['date_formats']) && is_array($app_config['date_formats'])) {
+				foreach ($app_config['date_formats'] as $name => $format) {
 					App\Timestamp::defineFormat($name, $format);
 				}
 			}
@@ -391,9 +395,9 @@
 			$valid_execution_modes = ['development', 'production'];
 			$this->executionMode   = self::DEFAULT_EXECUTION_MODE;
 
-			if (isset($config['execution_mode'])) {
-				if (in_array($config['execution_mode'], $valid_execution_modes)) {
-					$this->executionMode = $config['execution_mode'];
+			if (isset($app_config['execution_mode'])) {
+				if (in_array($app_config['execution_mode'], $valid_execution_modes)) {
+					$this->executionMode = $app_config['execution_mode'];
 				}
 			}
 
@@ -401,9 +405,9 @@
 			// Set up our write directory
 			//
 
-			$write_directory = !isset($config['write_directory']) || !$config['write_directory']
+			$write_directory = empty($app_config['write_directory'])
 				? self::DEFAULT_WRITE_DIRECTORY
-				: $config['write_directory'];
+				: $app_config['write_directory'];
 
 			if (!preg_match(REGEX\ABSOLUTE_PATH, $write_directory)) {
 				$this->writeDirectory = $this->getRoot() . DS . $write_directory;
@@ -411,54 +415,10 @@
 				$this->writeDirectory = $write_directory;
 			}
 
-			$this->configDebugging();
-			$this->configDatabases();
+			$this->configDebugging($app_config);
+			$this->configDatabases($config);
 
-			//
-			// Set up our libraries.
-			//
-
-			foreach ($this['config']->getByType('array', 'Library') as $eid => $library_config) {
-				$class    = $this['config']->classize($eid);
-				$autoload = !empty($library_config['auto_load']);
-
-				if (!$class) {
-					throw new Flourish\ProgrammerException(
-						'Library %s must define a `class` configuration element',
-						$eid
-					);
-				}
-
-				if (isset($library_config['root_directory'])) {
-					$this->addRoot($eid, $library_config['root_directory']);
-
-					if ($autoload) {
-						$this->addLoadingMap($class, 'IW: ' . $library_config['root_directory']);
-					}
-
-				} elseif ($autoload) {
-					throw new Flourish\ProgrammerException(
-						'Autoloading for class %s enabled, but no `root_directory` defined',
-						$class
-					);
-				}
-			}
-
-			//
-			// Set up our autoloaders
-			//
-
-			foreach ($this['config']->getByType('array', '@autoloading') as $autoloading_config) {
-
-				settype($autoloading_config['standards'], 'array');
-				settype($autoloading_config['map'], 'array');
-
-				foreach ($autoloading_config['standards'] as $standard => $transform_callback) {
-					$this->addLoadingStandard($standard, $transform_callback);
-				}
-
-				$this->loaders = array_merge($this->loaders, $autoloading_config['map']);
-			}
+			$this->configLibraries($config);
 
 			return $this;
 		}
@@ -554,6 +514,12 @@
 				return TRUE;
 			}
 
+			$interfaces = class_implements($class, FALSE);
+
+			if (!is_array($interfaces) || !in_array('Dotink\Interfaces\Inkwell', $interfaces)) {
+				return TRUE;
+			}
+
 			$init_callback = [$class, self::INITIALIZATION_METHOD];
 
 			//
@@ -628,7 +594,7 @@
 						continue;
 					}
 
-					$match_callback = [$test, self::MATCH_CLASS_METHOD];
+					$match_callback = [$test, self::MATCH_METHOD];
 
 					if (is_callable($match_callback)) {
 						self::$openMatchers[$test] = TRUE;
@@ -670,11 +636,7 @@
 								$this['config']->map($class, $base_dir . DS . $class_path);
 							}
 
-							if (is_array($interfaces = class_implements($class, FALSE))) {
-								return (in_array('Dotink\Interfaces\Inkwell', $interfaces))
-									? $this->initializeClass($class)
-									: TRUE;
-							}
+							return $this->initializeClass($class);
 						}
 					}
 				}
@@ -816,15 +778,45 @@
 
 
 		/**
+		 * Configures autoloading for inKWell
+		 *
+		 * @access private
+		 * @return void
+		 */
+		private function configAutoloading($config)
+		{
+			$autoloading_configs = $config->getByType('array', '@autoloading');
+
+			foreach ($autoloading_configs as $element_id => $autoloading_config) {
+				settype($autoloading_config['standards'], 'array');
+				settype($autoloading_config['map'], 'array');
+
+				foreach ($autoloading_config['standards'] as $standard => $transform_callback) {
+					$this->addLoadingStandard($standard, $transform_callback);
+				}
+
+				$this->loaders = array_merge($this->loaders, $autoloading_config['map']);
+			}
+
+			//
+			// Enable dynamic scaffolding
+			//
+
+			spl_autoload_register('Dotink\Inkwell\Scaffolder::loadClass');
+
+		}
+
+
+		/**
 		 * Configures databases for inKWell
 		 *
 		 * @access private
 		 * @return void
 		 */
-		private function configDatabases()
+		private function configDatabases($config)
 		{
-			$configs      = $this['config']->getByType('array', '@database');
-			$root_element = $this['config']->elementize('@database');
+			$configs      = $config->getByType('array', '@database');
+			$root_element = $config->elementize('@database');
 
 			if (isset($configs[$root_element])) {
 				$root_config = $configs[$root_element];
@@ -868,10 +860,8 @@
 		 * @access private
 		 * @return void
 		 */
-		private function configDebugging()
+		private function configDebugging($config)
 		{
-			$config = $this['config']->get('array', '@inkwell');
-
 			if (isset($config['error_level'])) {
 				error_reporting($config['error_level']);
 			}
@@ -921,6 +911,43 @@
 			}
 		}
 
+
+		/**
+		 * Configures libraries for inKWell
+		 *
+		 * @access private
+		 * @return void
+		 */
+		private function configLibraries($config)
+		{
+			$library_configs = $config->getByType('array', 'Library');
+
+			foreach ($library_configs as $element_id => $library_config) {
+				$class    = $this['config']->classize($element_id);
+				$autoload = !empty($library_config['auto_load']);
+
+				if (!$class) {
+					throw new Flourish\ProgrammerException(
+						'Library %s must define a `class` configuration element',
+						$element_id
+					);
+				}
+
+				if (isset($library_config['root_directory'])) {
+					$this->addRoot($element_id, $library_config['root_directory']);
+
+					if ($autoload) {
+						$this->addLoadingMap($class, 'IW: ' . $library_config['root_directory']);
+					}
+
+				} elseif ($autoload) {
+					throw new Flourish\ProgrammerException(
+						'Autoloading for class %s enabled, but no `root_directory` defined',
+						$class
+					);
+				}
+			}
+		}
 
 		/**
 		 * Transforms a class name to a given (registered) standard

@@ -15,17 +15,17 @@
 		'root_directory' => 'user/scaffolding',
 
 		//
-		// Application info will be available inside a template using self::getAppInfo()
+		// The scaffolder scope contains generic information relevant to scaffolding PHP code.
 		//
 
-		'app_info' => [
+		'scope' => [
 
 			//
 			// Used for namespacing by default
 			//
 
 			'vendor' => 'Vendor',
-			'name'   => 'Project',
+			'module' => 'Project',
 
 			//
 			// Author, Tag (initials or a handle), email, copyright

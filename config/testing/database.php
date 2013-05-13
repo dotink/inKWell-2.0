@@ -3,7 +3,6 @@
 	return Config::create(['Core'], [
 		'map' => [
 			'default' => [
-				'namespace' => NULL,
 				'connection' => [
 					'driver' => 'pdo_sqlite',
 					'dbname' => NULL,

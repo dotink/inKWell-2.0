@@ -17,7 +17,7 @@
 				// where proxies will be stored.
 				//
 
-				'namespace' => NULL,
+				'namespace' => 'App\Model',
 				'connection' => [
 
 					//
