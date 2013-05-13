@@ -29,6 +29,10 @@
 					-> equals('Vendor/Project/Exceptions/ClassException.php');
 
 				assert('Dotink\Inkwell\IW::transformClassToIW')
+					-> with('Vendor\Project\Exception')
+					-> equals('Vendor/Project/Exceptions/Exception.php');
+
+				assert('Dotink\Inkwell\IW::transformClassToIW')
 					-> with('Vendor\Project\ClassTrait')
 					-> equals('Vendor/Project/Traits/ClassTrait.php');
 
