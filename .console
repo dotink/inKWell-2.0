@@ -89,7 +89,7 @@
 
 	$___php .= implode(' ', $___shell_args);
 
-	if (isset($argv[1]) && trim($argv[1])) {
+	if (isset($argv[1]) && trim($argv[1]) && $argv[1] != '!') {
 
 		//
 		// If the first argument looks like a file, just include it
@@ -157,7 +157,6 @@
 
 	register_shutdown_function('___respawn');
 
-	$___dbconf    = $app['config']->get('array', 'databases');
 	$___stdin     = fopen('php://stdin', 'r');
 	$___stat      = fstat($___stdin);
 	$___depth     = 0;
@@ -165,9 +164,14 @@
 	$___line      = 1;
 	$___command   = '';
 	$___silent    = FALSE;
+	$___no_banner = FALSE;
 
-	if (isset($___dbconf['disabled']) && !$___dbconf['disabled']) {
-		$___database  = ___use_db('default');
+	if (isset($app['databases'])) {
+		if (isset($app['databases']['default'])) {
+			$___database = ___use_db('default');
+		} else {
+			$___database = ___use_db(array_keys($app['databases']));
+		}
 	}
 
 	if (($___stat['mode'] & 0170000) !== 0020000) {
@@ -176,7 +180,12 @@
 		$___code        = NULL;
 	}
 
-	if (!$___silent) {
+	if (isset($argv[1]) && $argv[1] == '!') {
+		$___no_banner = TRUE;
+		$___code      = NULL;
+	}
+
+	if (!$___silent && !$___no_banner) {
 		echo PHP_EOL;
 		echo '       .__        ____  __.__      __       .__  .__   ' . PHP_EOL;
 		echo '       |__| ____ |    |/ _/  \    /  \ ____ |  | |  |  ' . PHP_EOL;
@@ -217,8 +226,7 @@
 
 					echo PHP_EOL;
 
-					$___silent      = TRUE;
-					$___called_quit = TRUE;
+					$___multi_mode = TRUE;
 
 					while ($___mline = fgets($___stdin)) {
 						$___code = $___code . $___mline;
@@ -242,6 +250,32 @@
 					break;
 
 				case '\s':
+
+					if ($___command[2] == 'm') {
+						echo PHP_EOL;
+
+						if (!App\Core::checkOS('windows')) {
+							echo 'Entering non-interactive SQL mode, press <ctrl>+D when done.' . PHP_EOL;
+						} else {
+							echo 'Entering non-interactive SQL mode, press <ctrl>+Z when done.' . PHP_EOL;
+						}
+
+						echo PHP_EOL;
+
+						$___multi_mode = TRUE;
+						$___multi_sql  = TRUE;
+
+						while ($___mline = fgets($___stdin)) {
+							$___code = $___code . $___mline;
+						}
+
+						echo PHP_EOL;
+						echo 'Output:' . PHP_EOL;
+						echo PHP_EOL;
+						break;
+
+					}
+
 					if (!($___sql = trim(substr($___command, 2)))) {
 						echo 'Please enter your SQL: ';
 						$___sql = trim(fgets($___stdin));
@@ -250,24 +284,21 @@
 					break;
 
 				case '\u':
-					if (!($___db_select = trim(substr($___command, 2)))) {
+					if (!($___db_name = trim(substr($___command, 2)))) {
 						echo 'Enter the database name: ';
 						$___db_name = trim(fgets($___stdin));
-						echo 'Enter a role (read, write, [either]): ';
-						$___db_role = trim(fgets($___stdin));
-						if (!$___db_role) {
-							$___db_role = 'either';
-						}
-					} else {
-						$___db_select = explode(' ', $___db_select);
-						$___db_name   = isset($___db_select[0])
-							? $___db_select[0]
-							: 'default';
-						$___db_role   = isset($___db_select[1])
-							? $___db_select[1]
-							: 'either';
+
 					}
-					$___database = ___use_db($___db_name, $___db_role);
+
+					$___database = ___use_db($___db_name);
+					break;
+
+				case '\l':
+					foreach ($app['databases'] as $___db_name => $___garbage) {
+						echo PHP_EOL;
+						echo '- ' . $___db_name . PHP_EOL;
+						echo PHP_EOL;
+					}
 					break;
 
 				case '\>':
@@ -289,6 +320,7 @@
 					if (isset($___database)) {
 						echo '\s - Run SQL Statement'        . PHP_EOL;
 						echo '\u - Select Database'          . PHP_EOL;
+						echo '\l - List Databases'           . PHP_EOL;
 					}
 
 					echo '\> - Change Directory'             . PHP_EOL;
@@ -302,6 +334,12 @@
 
 
 		if ($___code) {
+
+			if (isset($___multi_sql)) {
+				___run_query($___database, $___code);
+				exit(0);
+			}
+
 
 			$___prev_depth = $___depth;
 
@@ -359,7 +397,7 @@
 			$___line++;
 		}
 
-		if (!$___silent) {
+		if (!$___silent && !isset($___multi_mode)) {
 			echo '[' . getcwd() . '][' . sprintf('%02s', $___line) . ']# ';
 			flush();
 		}
@@ -393,16 +431,33 @@
 	{
 		if (!isset($GLOBALS['___called_quit'])) {
 			echo ob_get_clean() . PHP_EOL;
-			echo 'Resetting...' . PHP_EOL;
-			passthru(implode(' ', array(
-				'php -q',
-					'-d register_globals=0',
-					'-d magic_quotes_gpc=0',
-					'-d short_open_tag=0',
-					'-d asp_tags=1',
-					'-d display_errors=1',
-					escapeshellarg(__FILE__)
-			)));
+
+			if (!isset($GLOBALS['___multi_mode'])) {
+				echo 'Resetting...' . PHP_EOL;
+
+				passthru(implode(' ', array(
+					'php -q',
+						'-d register_globals=0',
+						'-d magic_quotes_gpc=0',
+						'-d short_open_tag=0',
+						'-d asp_tags=1',
+						'-d display_errors=1',
+						escapeshellarg(__FILE__)
+				)));
+
+			} else {
+				passthru(implode(' ', array(
+					'php -q',
+						'-d register_globals=0',
+						'-d magic_quotes_gpc=0',
+						'-d short_open_tag=0',
+						'-d asp_tags=1',
+						'-d display_errors=1',
+						escapeshellarg(__FILE__),
+						'!'
+				)));
+			}
+
 
 			exit(1);
 
@@ -490,7 +545,7 @@
 	 */
 	function ___run_query($db, $sql)
 	{
-		if (!($db instanceof fDatabase)) {
+		if (!$db) {
 			echo PHP_EOL;
 			echo 'Cannot run SQL query, database inaccessible'      . PHP_EOL;
 			echo '  - Check your current configuration '            . PHP_EOL;
@@ -501,11 +556,14 @@
 
 		} else {
 			try {
-				$result = $db->query($sql);
+				$result = $db->query($sql)->fetch();
 
-				foreach($result as $record) {
-					App\Core::expose($record);
+				if ($result) {
+					foreach($result as $record) {
+						App\Core::expose($record);
+					}
 				}
+
 			} catch (Exception $e) {
 				echo 'Exception: ' . $e->getMessage();
 				echo PHP_EOL;
@@ -521,13 +579,22 @@
 	 * @param string $role The role of the database, default 'either'
 	 * @return fDatabase The fDatabase object if available, NULL otherwise
 	 */
-	function ___use_db($database, $role = 'either')
+	function ___use_db($database)
 	{
-		try {
-			return iw::getDatabase($database, $role);
-		} catch (fNotFoundException $e) {
-			return NULL;
+		global $app;
+
+		if (is_array($database)) {
+			if (isset($database[0])) {
+				$database = $database[0];
+			}
+
+		} else {
+			$database = (string) $database;
 		}
+
+		return isset($app['databases'][$database])
+			? $app['databases'][$database]->getConnection()
+			: NULL;
 	}
 
 
