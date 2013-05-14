@@ -21,6 +21,17 @@
 
 		const DEFAULT_TEMPLATE = 'main';
 
+
+		/**
+		 * The app instance responsible for this view
+		 *
+		 * @static
+		 * @access private
+		 * @var Dotink\Inkwell\IW
+		 */
+		static private $app = NULL;
+
+
 		/**
 		 * The default view root directory
 		 *
@@ -235,6 +246,8 @@
 					$config['asset_filters']
 				);
 			}
+
+			self::$app = $app;
 		}
 
 
@@ -441,7 +454,7 @@
 								: $view
 						);
 
-						$this->views[$element][$i] = $this->buffer(function() {
+						$this->views[$element][$i] = $this->buffer(function($app) {
 							include $this->currentFile;
 						});
 
@@ -473,7 +486,6 @@
 				$this->head = new self($this);
 			}
 
-
 			$this->compile();
 
 			if (!$this->parent) {
@@ -486,7 +498,7 @@
 					: $this->template . '.' . $this->type . '.php'
 			);
 
-			$view = $this->buffer(function() {
+			$view = $this->buffer(function($app) {
 				include $this->currentFile;
 			});
 
@@ -529,6 +541,8 @@
 					);
 				}
 			}
+
+			return $this;
 		}
 
 
@@ -579,6 +593,8 @@
 			$stack[] = $value;
 
 			$this->offsetSet($element, $stack);
+
+			return $this;
 		}
 
 
@@ -607,7 +623,7 @@
 		private function buffer(\Closure $closure)
 		{
 			if (ob_start()) {
-				$closure();
+				$closure(self::$app);
 				return ob_get_clean();
 			}
 
