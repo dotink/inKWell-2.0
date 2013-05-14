@@ -773,6 +773,9 @@
 
 			$response->setRequest($request);
 
+			$this->children['router']  = $router;
+			$this->children['request'] = $request;
+
 			return $router->run($request, $response);
 		}
 
