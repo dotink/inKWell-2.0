@@ -10,6 +10,7 @@
 - [Responses](/getting_started/responses)
 - [Views](/getting_started/views)
 - [Templating](/getting_started/templating)
+- [Models](/getting_started/models)
 
 ##### There's a Lot You Can Do Under the Hood.
 
