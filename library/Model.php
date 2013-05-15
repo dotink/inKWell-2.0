@@ -31,7 +31,13 @@
 
 
 		/**
+		 * Initialize the class
 		 *
+		 * @static
+		 * @access public
+		 * @param Dotink\Inkwell\IW $app The application instance loading the class
+		 * @param array $config The configuration array for the class
+		 * @return boolean TRUE on success, FALSE on failure
 		 */
 		static public function __init($app, Array $config = array())
 		{
@@ -80,6 +86,8 @@
 					$repository
 				);
 			}
+
+			return TRUE;
 		}
 
 

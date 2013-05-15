@@ -1,6 +1,13 @@
 <?php namespace Dotink\Inkwell
 {
 	return Config::create(['Core'], [
+
+		'types' => [
+			//
+			// 'ts_vector' => 'Dotink\Dub\Type\TSVector'
+			//
+		],
+
 		'map' => [
 			'default' => [
 				'connection' => [

@@ -25,6 +25,13 @@
 
 
 		/**
+		 * The application instance responsible for this router
+		 *
+		 */
+		static private $app = NULL;
+
+
+		/**
 		 * A list of regex patterns for various pattern tokens
 		 *
 		 * @static
@@ -127,12 +134,16 @@
 		/**
 		 * Initialize the class
 		 *
+		 * @static
+		 * @access public
 		 * @param Dotink\Inkwell\IW $app The application instance loading the class
 		 * @param array $config The configuration array for the class
 		 * @return boolean TRUE on success, FALSE on failure
 		 */
 		static public function __init($app, Array $config = array())
 		{
+			self::$app = $app;
+
 			if (isset($config['restless']) && $config['restless']) {
 				self::$restless = TRUE;
 			}
@@ -548,7 +559,7 @@
 
 			ob_start();
 
-			$action_response   = self::callAction($this, $action, $request, $response);
+			$action_response   = self::callAction($action, self::$app, $this, $request, $response);
 			$resolved_response = ($output = ob_get_clean())
 				? $response(HTTP\OK, NULL, [], $output)
 				: $response->resolve($action_response);
