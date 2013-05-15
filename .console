@@ -167,11 +167,7 @@
 	$___no_banner = FALSE;
 
 	if (isset($app['databases'])) {
-		if (isset($app['databases']['default'])) {
-			$___database = ___use_db('default');
-		} else {
-			$___database = ___use_db(array_keys($app['databases']));
-		}
+		$___database = ___use_db('default');
 	}
 
 	if (($___stat['mode'] & 0170000) !== 0020000) {
