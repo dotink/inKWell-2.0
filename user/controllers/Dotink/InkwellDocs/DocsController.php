@@ -19,7 +19,7 @@
 		/**
 		 *
 		 */
-		static public function __init($app, $config = array())
+		static public function __init($app, Array $config = array())
 		{
 			$doc_root = isset($config['doc_root'])
 				? self::DEFAULT_DOC_ROOT
