@@ -114,3 +114,28 @@ The repeat method allows you to repeat the previous emitter used in an `each()` 
 	<% if ($i == 0) { %><ul><% } %>
 <% }) %>
 ```
+
+## Accessing the App Container {#app_access}
+
+View template are somewhat unique in that they have direct access to the application instance using the `$app` variable.  Aside from `$this` which references the view object, `$app` is the only predefined variable inside a template.
+
+This is most commonly used in order to access the application router in order to compose links:
+
+```php
+<% namespace Dotink\Inkwell\View\HTML
+{
+	$username  = $this['user']->getUserName();
+	$links     = [
+		'edit_profile' => $app['router']->compose(
+			'/users/[username]?action=edit', [
+				'username' => $username
+			]
+		)
+	];
+
+	%>
+	<a href="<%= $links['edit_profile'] %>">Edit Your Proile</a>
+	<%
+}
+```
+
