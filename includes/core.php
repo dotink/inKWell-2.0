@@ -43,6 +43,7 @@
 		 */
 		static private $openMatchers = array();
 
+		static private $staticLoaderMatches = array();
 
 		/**
 		 * A list of just-in-time aliases for the autoloader
@@ -175,16 +176,7 @@
 
 			$this->addRoot(NULL, $root_directory);
 
-			$composer_autoloader = implode(DS, [
-				$this->getRoot(NULL, 'vendor'),
-				'autoload.php'
-			]);
-
-			if (file_exists($composer_autoloader)) {
-				include $composer_autoloader;
-			}
-
-			spl_autoload_register([$this, 'loadClass'], true, true);
+			spl_autoload_register([$this, 'loadClass']);
 		}
 
 
@@ -581,6 +573,12 @@
 				$loaders = $this->loaders;
 			}
 
+			//
+			// Now that we have our loaders we are going to iterate over them and perform each
+			// test.  Once we have a matching test we will attempt to load the class via the
+			// target.
+			//
+
 			foreach ($loaders as $test => $target) {
 				if (strpos($test, '*') !== FALSE) {
 					$regex = str_replace('*', '.*', str_replace('\\', '\\\\', $test));
@@ -589,7 +587,7 @@
 						continue;
 					}
 
-				} elseif (class_exists($test)) {
+				} elseif (!isset(self::$staticLoaderMatches[$test]) && class_exists($test)) {
 					if (isset(self::$openMatchers[$test])) {
 						continue;
 					}
@@ -606,40 +604,68 @@
 							unset(self::$openMatchers[$test]);
 						}
 					}
-				}
 
-				$target = explode(':', $target, 2);
-
-				if (count($target) == 1) {
-					$standard = NULL;
-					$target   = trim($target[0]);
 				} else {
-					$standard = trim($target[0]);
-					$target   = trim($target[1]);
+					self::$staticLoaderMatches[$test] = TRUE;
 				}
 
-				$base_dir     = trim($target, '/\\' . DS);
-				$class_path   = $this->transformClassToPath($class, $standard);
-				$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
+				//
+				// Load the class from the configured target
+				//
 
-				if (file_exists($include_file)) {
-					include_once $include_file;
+				if (is_string($target)) {
+					$target = explode(':', $target, 2);
 
-					if (class_exists($class, FALSE)) {
-
-						//
-						// Map any available configuration to this class
-						//
-
-						if (isset($this['config'])) {
-							if (!$this['config']->elementize($class)) {
-								$this['config']->map($class, $base_dir . DS . $class_path);
-							}
-
-							return $this->initializeClass($class);
-						}
+					if (count($target) == 1) {
+						$standard = NULL;
+						$target   = trim($target[0]);
+					} else {
+						$standard = trim($target[0]);
+						$target   = trim($target[1]);
 					}
+
+					$base_dir     = trim($target, '/\\' . DS);
+					$class_path   = $this->transformClassToPath($class, $standard);
+					$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
+
+					if (file_exists($include_file)) {
+						include_once $include_file;
+					}
+
+				} elseif (is_callable($target)) {
+					if (!$target($class, $include_file)) {
+						continue;
+					}
+
+				} else {
+					continue;
 				}
+
+				//
+				// If we know the include file, let's cache the loaded class/interface/trait
+				// to the include file location across requests.
+				//
+
+
+				if ($include_file) {
+					$map_path = str_replace($this->getRoot() . DS, '', $include_file);
+
+				}
+
+				//
+				// If this was a class and our config is defined, let's go ahead an map the
+				// class to a config and then attempt to initialize it.
+				//
+
+				if (class_exists($class, FALSE) && isset($this['config'])) {
+					if (!$this['config']->elementize($class) && isset($map_path)) {
+						$this['config']->map($class, $map_path);
+					}
+
+					return $this->initializeClass($class);
+				}
+
+				return TRUE;
 			}
 
 			return FALSE;
@@ -788,6 +814,34 @@
 		 */
 		private function configAutoloading($config)
 		{
+			//
+			// The following places composer inside our autoloader.  This is done so that we can
+			// cache the classmap in a uniform way.
+			//
+
+			$loader_file = implode(DS, [$this->getRoot(NULL, 'vendor'), 'autoload.php']);
+
+			if (file_exists($loader_file)) {
+				$loader = include $loader_file;
+
+				$loader->unregister();
+				$this->addLoadingMap('composer', function($class, &$include_file) use ($loader) {
+					$loaded = $loader->loadClass($class);
+
+					if ($loaded) {
+						$include_file = $loader->findFile($class);
+
+						return TRUE;
+					}
+
+					return FALSE;
+				});
+			}
+
+			//
+			// Now we can get additional autoloading configs and merge them in
+			//
+
 			$autoloading_configs = $config->getByType('array', '@autoloading');
 
 			foreach ($autoloading_configs as $element_id => $autoloading_config) {
