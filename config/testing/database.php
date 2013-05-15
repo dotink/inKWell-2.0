@@ -17,6 +17,12 @@
 						DIRECTORY_SEPARATOR,
 						[__DIR__, '..', '..', 'external', 'testing', 'sample.db']
 					)
+				],
+
+				'types' => [
+					//
+					// 'tsvector' => 'ts_vector'
+					//
 				]
 			],
 		],
