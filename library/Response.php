@@ -21,6 +21,17 @@
 		const DEFAULT_TYPE            = 'text/html';
 		const REGEX_AGING             = '#(\d+)\s*(year|week|day|hour|minute|second)(?:s?)#i';
 
+
+		/**
+		 * The application instance which loaded this response
+		 *
+		 * @static
+		 * @access private
+		 * @var Dotink\Inkwell\IW
+		 */
+		static private $app = NULL;
+
+
 		/**
 		 * Location of the cache directory
 		 *
@@ -233,6 +244,8 @@
 		 */
 		static public function __init($app, $config = array())
 		{
+			self::$app = $app;
+
 			self::$cacheDirectory = isset($config['cache_directory'])
 				? $app->getWriteDirectory($config['cache_directory'])
 				: $app->getWriteDirectory(self::DEFAULT_CACHE_DIRECTORY);
@@ -375,7 +388,7 @@
 
 
 		/**
-		 * Generates or validates an etag in apc cache
+		 * Generates or validates an etag in cache
 		 *
 		 * @static
 		 * @access private
@@ -386,13 +399,13 @@
 		 */
 		static private function etag($cache_id, $etag, $validate = FALSE)
 		{
-			if (extension_loaded('apc') && ini_get('apc.enabled')) {
-				$key = __CLASS__ . '::ETAGS::' . $cache_id;
+			if (isset(self::$app['cache'])) {
+				$cache_key = md5(self::$app->getRoot() . __CLASS__ . 'ETAGS' . $cache_id);
 
 				if ($validate) {
-					return (apc_fetch($key) == $etag);
+					return self::$app['cache']->get($cache_key) == $etag;
 				} else {
-					apc_store($key, $etag);
+					self::$app['cache']->set($cache_key, $etag);
 				}
 			}
 
