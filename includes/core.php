@@ -411,21 +411,19 @@
 			// Set us up the bomb
 			//
 
-			if (!isset($app_config['cache']) || !isset($app_config['cache']['type'])) {
-				return;
+			if (isset($app_config['cache']) && isset($app_config['cache']['type'])) {
+				$type = $app_config['cache']['type'];
+
+				$data_store = isset($app_config['cache']['data_store'])
+					? $app_config['cache']['data_store']
+					: NULL;
+
+				$cache_config = isset($app_config['cache']['config'])
+					? $app_config['cache']['config']
+					: array();
+
+				$this->children['cache'] = new Flourish\Cache($type, $data_store, $cache_config);
 			}
-
-			$type = $app_config['cache']['type'];
-
-			$data_store = isset($app_config['cache']['data_store'])
-				? $app_config['cache']['data_store']
-				: NULL;
-
-			$cache_config = isset($app_config['cache']['config'])
-				? $app_config['cache']['config']
-				: array();
-
-			$this->children['cache'] = new Flourish\Cache($type, $data_store, $cache_config);
 
 			$this->configDebugging($app_config);
 			$this->configDatabases($config);
@@ -594,6 +592,7 @@
 				include $include_file = $value;
 
 			} else {
+
 				if (!count($loaders)) {
 					$loaders = $this->loaders;
 				}
@@ -605,6 +604,8 @@
 				//
 
 				foreach ($loaders as $test => $target) {
+					$include_file = NULL;
+
 					if (strpos($test, '*') !== FALSE) {
 						$regex = str_replace('*', '.*', str_replace('\\', '\\\\', $test));
 
@@ -655,30 +656,23 @@
 
 						if (file_exists($include_file)) {
 							include_once $include_file;
-
-						} else {
-							continue;
+							break;
 						}
 
 					} elseif (is_callable($target)) {
-						if (!$target($class, $include_file)) {
-							continue;
+						if ($target($class, $include_file)) {
+							break;
 						}
-
-					} else {
-						continue;
 					}
-
-					break;
 				}
 			}
 
-			if (isset($include_file)) {
-				$map_path = str_replace($this->getRoot() . DS, '', $include_file);
-
+			if ($include_file) {
 				if (isset($this['cache'])) {
 					$this['cache']->set($cache_key, $include_file);
 				}
+
+				$map_path = str_replace($this->getRoot() . DS, '', $include_file);
 
 				//
 				// If this was a class and our config is defined, let's go ahead an map the
