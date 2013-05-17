@@ -39,11 +39,32 @@
 		/**
 		 * Tracks open matchers to avoid recursion if they need a class
 		 *
+		 * @static
+		 * @access private
 		 * @var array
 		 */
 		static private $openMatchers = array();
 
+
+		/**
+		 * Tracks static loader matches in the autoloader
+		 *
+		 * @static
+		 * @access private
+		 * @var array
+		 */
 		static private $staticLoaderMatches = array();
+
+
+		/**
+		 * Tracks dynamic loader matches in the autoloader
+		 *
+		 * @static
+		 * @access private
+		 * @var array
+		 */
+		static private $dynamicLoaderMatches = array();
+
 
 		/**
 		 * A list of just-in-time aliases for the autoloader
@@ -112,6 +133,28 @@
 		 * @var array
 		 */
 		private $writeDirectory = NULL;
+
+
+		/**
+		 * Determine if a loader test is a dynamic matcher
+		 *
+		 * @static
+		 * @access private
+		 * @param string $test The test to check (a loadable class will be dynamic)
+		 * @return boolean TRUE if it's a dynamic loader match, FALSE otherwise
+		 */
+		static private function isDynamicLoaderMatch($test)
+		{
+			if (isset(self::$staticLoaderMatches[$test])) {
+				return FALSE;
+			} elseif (isset(self::$dynamicLoaderMatches[$test])) {
+				return TRUE;
+			} elseif (class_exists($test)) {
+				return self::$dynamicLoaderMatches[$test] = TRUE;
+			}
+
+			return FALSE;
+		}
 
 
 		/**
@@ -613,7 +656,7 @@
 							continue;
 						}
 
-					} elseif (!isset(self::$staticLoaderMatches[$test]) && class_exists($test)) {
+					} elseif (self::isDynamicLoaderMatch($test)) {
 						if (isset(self::$openMatchers[$test])) {
 							continue;
 						}
@@ -623,7 +666,7 @@
 						if (is_callable($match_callback)) {
 							self::$openMatchers[$test] = TRUE;
 
-							if (!call_user_func($match_callback, $class)) {
+							if (!$test::{self::MATCH_METHOD}($class)) {
 								unset(self::$openMatchers[$test]);
 								continue;
 							} else {
