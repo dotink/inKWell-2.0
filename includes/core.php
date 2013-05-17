@@ -407,9 +407,28 @@
 				$this->writeDirectory = $write_directory;
 			}
 
+			//
+			// Set us up the bomb
+			//
+
+			if (!isset($app_config['cache']) || !isset($app_config['cache']['type'])) {
+				return;
+			}
+
+			$type = $app_config['cache']['type'];
+
+			$data_store = isset($app_config['cache']['data_store'])
+				? $app_config['cache']['data_store']
+				: NULL;
+
+			$cache_config = isset($app_config['cache']['config'])
+				? $app_config['cache']['config']
+				: array();
+
+			$this->children['cache'] = new Flourish\Cache($type, $data_store, $cache_config);
+
 			$this->configDebugging($app_config);
 			$this->configDatabases($config);
-
 			$this->configLibraries($config);
 
 			return $this;
@@ -569,87 +588,96 @@
 				return FALSE;
 			}
 
-			if (!count($loaders)) {
-				$loaders = $this->loaders;
+			$cache_key = md5($this->getRoot() . __CLASS__ . __FUNCTION__ . $class);
+
+			if (isset($this['cache']) && ($value = $this['cache']->get($cache_key))) {
+				include $include_file = $value;
+
+			} else {
+				if (!count($loaders)) {
+					$loaders = $this->loaders;
+				}
+
+				//
+				// Now that we have our loaders we are going to iterate over them and perform each
+				// test.  Once we have a matching test we will attempt to load the class via the
+				// target.
+				//
+
+				foreach ($loaders as $test => $target) {
+					if (strpos($test, '*') !== FALSE) {
+						$regex = str_replace('*', '.*', str_replace('\\', '\\\\', $test));
+
+						if (!preg_match('#^' . $regex . '$#', $class)) {
+							continue;
+						}
+
+					} elseif (!isset(self::$staticLoaderMatches[$test]) && class_exists($test)) {
+						if (isset(self::$openMatchers[$test])) {
+							continue;
+						}
+
+						$match_callback = [$test, self::MATCH_METHOD];
+
+						if (is_callable($match_callback)) {
+							self::$openMatchers[$test] = TRUE;
+
+							if (!call_user_func($match_callback, $class)) {
+								unset(self::$openMatchers[$test]);
+								continue;
+							} else {
+								unset(self::$openMatchers[$test]);
+							}
+						}
+
+					} else {
+						self::$staticLoaderMatches[$test] = TRUE;
+					}
+
+					//
+					// Load the class from the configured target
+					//
+
+					if (is_string($target)) {
+						$target = explode(':', $target, 2);
+
+						if (count($target) == 1) {
+							$standard = NULL;
+							$target   = trim($target[0]);
+						} else {
+							$standard = trim($target[0]);
+							$target   = trim($target[1]);
+						}
+
+						$base_dir     = trim($target, '/\\' . DS);
+						$class_path   = $this->transformClassToPath($class, $standard);
+						$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
+
+						if (file_exists($include_file)) {
+							include_once $include_file;
+
+						} else {
+							continue;
+						}
+
+					} elseif (is_callable($target)) {
+						if (!$target($class, $include_file)) {
+							continue;
+						}
+
+					} else {
+						continue;
+					}
+
+					break;
+				}
 			}
 
-			//
-			// Now that we have our loaders we are going to iterate over them and perform each
-			// test.  Once we have a matching test we will attempt to load the class via the
-			// target.
-			//
+			if (isset($include_file)) {
+				$map_path = str_replace($this->getRoot() . DS, '', $include_file);
 
-			foreach ($loaders as $test => $target) {
-				if (strpos($test, '*') !== FALSE) {
-					$regex = str_replace('*', '.*', str_replace('\\', '\\\\', $test));
-
-					if (!preg_match('#^' . $regex . '$#', $class)) {
-						continue;
-					}
-
-				} elseif (!isset(self::$staticLoaderMatches[$test]) && class_exists($test)) {
-					if (isset(self::$openMatchers[$test])) {
-						continue;
-					}
-
-					$match_callback = [$test, self::MATCH_METHOD];
-
-					if (is_callable($match_callback)) {
-						self::$openMatchers[$test] = TRUE;
-
-						if (!call_user_func($match_callback, $class)) {
-							unset(self::$openMatchers[$test]);
-							continue;
-						} else {
-							unset(self::$openMatchers[$test]);
-						}
-					}
-
-				} else {
-					self::$staticLoaderMatches[$test] = TRUE;
-				}
-
-				//
-				// Load the class from the configured target
-				//
-
-				if (is_string($target)) {
-					$target = explode(':', $target, 2);
-
-					if (count($target) == 1) {
-						$standard = NULL;
-						$target   = trim($target[0]);
-					} else {
-						$standard = trim($target[0]);
-						$target   = trim($target[1]);
-					}
-
-					$base_dir     = trim($target, '/\\' . DS);
-					$class_path   = $this->transformClassToPath($class, $standard);
-					$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
-
-					if (file_exists($include_file)) {
-						include_once $include_file;
-					}
-
-				} elseif (is_callable($target)) {
-					if (!$target($class, $include_file)) {
-						continue;
-					}
-
-				} else {
-					continue;
-				}
-
-				//
-				// If we know the include file, let's cache the loaded class/interface/trait
-				// to the include file location across requests.
-				//
-
-
-				if ($include_file) {
-					$map_path = str_replace($this->getRoot() . DS, '', $include_file);
-
+				if (isset($this['cache'])) {
+					$this['cache']->set($cache_key, $include_file);
 				}
 
 				//
