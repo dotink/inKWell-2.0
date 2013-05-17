@@ -37,23 +37,21 @@
 		'error_level'    => E_ALL & ~E_STRICT,
 		'error_email_to' => NULL,
 
-		//
-		// Enabling persistent sessions will cause the user's session to stay
-		// alive even after they close the browser.  This is not recommended
-		// sitewide, but is an available option, if you would like to enable
-		// a persistent session depending on some kind of logic, see:
-		// http://flourishlib.com/docs/fSession
-		//
+		'cache' => [
+			//
+			// Valid types include 'apc', 'file', 'directory', 'memcache', 'redis', 'xcache'
+			//
 
-		'persistent_sessions' => FALSE,
-		'session_length'      => '1 day',
+			'type' => 'apc',
 
-		//
-		// You can store sessions in a custom directory for security purposes
-		// or for network filesystem access, relative to writable directory
-		//
+			//
+			// For 'file' and 'directory' the datastore is a path.  For 'memcache' and 'redis' it
+			// is the class of the appropriate object to insantiate, e.g. 'Memcached'
+			//
+			// 'data_store' => ''
+			//
 
-		'session_path' => NULL,
+		],
 
 		//
 		// Default timezones follow the standard PHP notation, a list of
