@@ -69,7 +69,7 @@
 		//
 
 		'actions' => [
-			'/system_information' => 'phpinfo'
+
 		],
 
 		//
