@@ -132,8 +132,6 @@
 			}
 
 			return self::search($class);
-
-			return FALSE;
 		}
 
 

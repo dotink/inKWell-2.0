@@ -655,7 +655,11 @@
 				? self::decompile($handler['action'], array())
 				: $handler['action'];
 
-			return $this->captureResponse($action, $request, $response);
+			try {
+				$response = $this->captureResponse($action, $request, $response);
+			} catch (Flourish\ContinueException $e) {}
+
+			return $response;
 		}
 
 
