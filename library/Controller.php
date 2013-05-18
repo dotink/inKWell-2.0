@@ -18,6 +18,35 @@
 	class Controller implements Interfaces\Inkwell, Interfaces\Controller
 	{
 		use Traits\Container;
+		use Traits\ActionCaller;
+
+
+		/**
+		 * The application instance which loaded this controller
+		 *
+		 * @static
+		 * @access private
+		 * @var Dotink\Inkwell\IW
+		 */
+		static private $app = NULL;
+
+
+		/**
+		 * Initialize the class
+		 *
+		 * @static
+		 * @access public
+		 * @param Dotink\Inkwell\IW $app The application instance loading the class
+		 * @param array $config The configuration array for the class
+		 * @return boolean TRUE on success, FALSE on failure
+		 */
+		static private function __init($app, Array $config = array())
+		{
+			self::$app = $app;
+
+			return TRUE;
+		}
+
 
 		/**
 		 * Determines whether or not a class name is a controller
@@ -142,6 +171,29 @@
 				'Controller has yielded due to error: %s',
 				$error
 			);
+		}
+
+
+		/**
+		 *
+		 */
+		protected function exec($url, $request)
+		{
+			$action   = $this['router']->resolve($url, $request);
+			$response = new App\Response();
+
+			ob_start();
+
+			$action_response   = self::callAction($this['router'], $action, $request, $response);
+			$resolved_response = ($output = ob_get_clean())
+				? $response(HTTP\OK, NULL, [], $output)
+				: $response->resolve($action_response);
+
+			//
+			// transform response view
+			//
+
+			return $resolved_response;
 		}
 	}
 }
