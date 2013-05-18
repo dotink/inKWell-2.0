@@ -472,6 +472,13 @@
 			$this->configDatabases($config);
 			$this->configLibraries($config);
 
+			//
+			// Enable dynamic scaffolding.  This should always be the absolute last thing we
+			// do.
+			//
+
+			spl_autoload_register('Dotink\Inkwell\Scaffolder::loadClass');
+
 			return $this;
 		}
 
@@ -666,11 +673,9 @@
 						if (is_callable($match_callback)) {
 							self::$openMatchers[$test] = TRUE;
 
-							if (!$test::{self::MATCH_METHOD}($class)) {
+							if ($test::{self::MATCH_METHOD}($class)) {
 								unset(self::$openMatchers[$test]);
-								continue;
-							} else {
-								unset(self::$openMatchers[$test]);
+								return TRUE;
 							}
 						}
 
@@ -919,13 +924,6 @@
 
 				$this->loaders = array_merge($this->loaders, $autoloading_config['map']);
 			}
-
-			//
-			// Enable dynamic scaffolding
-			//
-
-			spl_autoload_register('Dotink\Inkwell\Scaffolder::loadClass');
-
 		}
 
 
