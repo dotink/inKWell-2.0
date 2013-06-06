@@ -54,7 +54,7 @@ Make sure these directories are writable by whatever user and/or group your webs
 You can run a quick test of your installation by running the following command:
 
 ```php
-php -S localhost:8080 -t <directory/public>
+IW_CONFIG=testing php -d variables_order=EGPCS -S localhost:8080 -t public
 ```
 
 Then visiting [http://localhost:8080/system_information](http://localhost:8080/system_information) in your browser.  If everything goes well you should see a standard `phpinfo()` dump.
