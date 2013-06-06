@@ -1,4 +1,4 @@
-<?php namespace <%= $this->getNamespace() . PHP_EOL %>
+<?php namespace <%= $this->getNamespace() %>
 {
 	use Dotink\Inkwell;
 	use Dotink\Flourish;
@@ -7,7 +7,7 @@
 	/**
 	 * The <%= $this->getShortName() %> class.
 	 *
-	 * @copyright Copyright (c) <%= date('Y') %>, <%= $this->getScope('copyright') . PHP_EOL %>
+	 * @copyright Copyright (c) <%= date('Y') %>, <%= $this->getScope('copyright') %>
 	 * @author <%= $this->getScope('author') %> [<%= $this->getScope('tag') %>] <<%= $this->getScope('email') %>>
 	 *
 	 * @license Please reference the LICENSE.txt file at the root of this distribution
