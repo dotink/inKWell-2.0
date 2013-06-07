@@ -313,6 +313,7 @@
 
 			if (strpos($this->template, '<?php') !== FALSE) {
 				$this->template = str_replace('<?php', self::OPEN_TOKEN, $this->template);
+				$this->template = preg_replace('#\%\>(\r\n|\n|\r)#', '%>$1$1', $this->template);
 			}
 
 			$this->code = call_user_func(function(){

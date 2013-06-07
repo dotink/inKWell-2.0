@@ -5,6 +5,9 @@
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
 	use Dotink\Dub\ModelConfiguration;
+	use Doctrine\ORM\Mapping\ClassMetadata;
+	use Doctrine\ORM\Mapping\Builder\ClassMetadataBuilder;
+
 
 	/**
 	 * Model class responsible for ownage
@@ -138,11 +141,15 @@
 		/**
 		 *
 		 */
-		static public function configureMetadata($builder) {
-			$class = get_called_class();
+		static public function loadMetadata(ClassMetadata $metadata)
+		{
+			$class   = get_called_class();
+			$builder = new ClassMetadataBuilder($metadata);
 
 			if ($class == __CLASS__) {
 				$builder->setMappedSuperclass();
+			} else {
+				parent::loadMetaData($metadata);
 			}
 		}
 
@@ -202,6 +209,8 @@
 		 *
 		 */
 		static private function iterateOn($databases, $action, $callback) {
+			settype($databases, 'array');
+
 			foreach ($databases as $database) {
 				if (!isset(self::$databases[$database])) {
 					throw new Flourish\ProgrammerException(
