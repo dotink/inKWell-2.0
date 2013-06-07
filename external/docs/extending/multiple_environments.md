@@ -48,3 +48,13 @@ For NGINX users you will usually want to add the following to an appropriate loc
 ```php
 fastcgi_param IW_CONFIG <environment>;
 ```
+
+#### Development Server {#development_server}
+
+PHP's built-in development server may not register the `$_ENV` superglobal and because the `$_SERVER` variable is populated in an isolated context, it may be required to set the `variables_order` directive during launch.
+
+```php
+IW_CONFIG=testing php -d variables_order=EGPCS -S localhost:8080 -t public
+```
+
+The above example from an application root would run inKWell on the development server with the `testing` configuration, ensuring that `$_ENV` is registered.
