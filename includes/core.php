@@ -673,9 +673,11 @@
 						if (is_callable($match_callback)) {
 							self::$openMatchers[$test] = TRUE;
 
-							if ($test::{self::MATCH_METHOD}($class)) {
+							if (!$test::{self::MATCH_METHOD}($class)) {
 								unset(self::$openMatchers[$test]);
-								return TRUE;
+								continue;
+							} else {
+								unset(self::$openMatchers[$test]);
 							}
 						}
 
