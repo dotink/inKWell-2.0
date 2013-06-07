@@ -167,10 +167,6 @@
 				$database = self::$databases->lookup($namespace);
 			}
 
-			if (!$database) {
-				$database = 'default';
-			}
-
 			if (isset(self::$databases[$database])) {
 				$connection = self::$databases[$database]->getConnection();
 				$schema     = $connection->getSchemaManager();

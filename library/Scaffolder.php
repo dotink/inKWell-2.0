@@ -267,7 +267,11 @@
 
 		public function getClass()
 		{
-			return $this->getNamespace() . '\\' . $this->getShortName();
+			$namespace = $this->getNamespace();
+
+			return $namespace
+				? $namespace . '\\' . $this->getShortName()
+				: $this->getShortName();
 		}
 
 		/**
