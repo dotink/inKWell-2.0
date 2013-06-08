@@ -469,7 +469,11 @@
 				$this->rootDirectory = $this->parent->rootDirectory;
 			}
 
-			foreach ($this->components as $element => $list) {
+			reset($this->components);
+
+			while ($element = key($this->components)) {
+				$list = $this->components[$element];
+
 				foreach ($list as $i => $view) {
 					if (is_string($view)) {
 						$this->setCurrentFile(
@@ -494,6 +498,8 @@
 						);
 					}
 				}
+
+				next($this->components);
 			}
 		}
 
@@ -744,10 +750,10 @@
 				$rebuild = TRUE;
 
 			} elseif (self::$cacheMode == EXEC_MODE_DEVELOPMENT) {
-				$cache_mtime = filemtime($cache_file);
+				$cache_mtime = @filemtime($cache_file);
 
 				foreach ($files as $file) {
-					$file_mtime = $file;
+					$file_mtime = @filemtime($file);
 
 					if ($file_mtime > $cache_mtime) {
 						$rebuild = TRUE;
