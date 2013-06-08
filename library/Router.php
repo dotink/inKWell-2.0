@@ -551,7 +551,7 @@
 		 * @param Interfaces\Response $response The current response
 		 * @return Interfaces\Response The new or modified response
 		 */
-		private function captureResponse($action, $request, $response)
+		private function captureResponse($action, $request, $response, $mutable = TRUE)
 		{
 			$action = $this->parseAction($action);
 
@@ -559,10 +559,16 @@
 
 			ob_start();
 
-			$action_response   = self::callAction($action, self::$app, $this, $request, $response);
-			$resolved_response = ($output = ob_get_clean())
-				? $response(HTTP\OK, NULL, [], $output)
-				: $response->resolve($action_response);
+			$action_response = self::callAction($action, self::$app, $this, $request, $response);
+			$output          = ob_get_clean();
+
+			if ($output) {
+				$resolved_response = $mutable
+					? $response(HTTP\OK, $output)
+					: $response($response->getStatus(), $output);
+			} else {
+				$resolved_response = $response->resolve($action_response);
+			}
 
 			$this->emit('endAction', $resolved_response);
 
@@ -656,7 +662,7 @@
 				: $handler['action'];
 
 			try {
-				$response = $this->captureResponse($action, $request, $response);
+				$response = $this->captureResponse($action, $request, $response, FALSE);
 			} catch (Flourish\ContinueException $e) {}
 
 			return $response;
