@@ -276,6 +276,7 @@
 						echo 'Please enter your SQL: ';
 						$___sql = trim(fgets($___stdin));
 					}
+
 					___run_query($___database, $___sql);
 					break;
 
@@ -552,10 +553,10 @@
 
 		} else {
 			try {
-				$result = $db->query($sql)->fetch();
+				$result = $db->query($sql);
 
 				if ($result) {
-					foreach($result as $record) {
+					while ($record = $result->fetch()) {
 						App\Core::expose($record);
 					}
 				}
