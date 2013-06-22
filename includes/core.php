@@ -25,6 +25,7 @@
 		const INITIALIZATION_METHOD    = '__init';
 		const MATCH_METHOD             = '__match';
 		const MAKE_METHOD              = '__make';
+		const BUILD_METHOD             = '__build';
 
 		const DEFAULT_CONFIG_DIRECTORY = 'config';
 		const DEFAULT_WRITE_DIRECTORY  = 'assets';

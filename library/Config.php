@@ -302,7 +302,7 @@
  			} else {
 				throw new Flourish\ProgrammerException(
 					'Cannot build configuration, directory "%s" is not readable.',
-					$directory
+					$this->configPath
 				);
  			}
 

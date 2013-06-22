@@ -22,6 +22,7 @@
 	{
 		const OPEN_TOKEN             = '_##OPEN-PHP-TAG##_';
 		const DEFAULT_ROOT_DIRECTORY = 'user/scaffolding';
+		const OPERATION_ROOT         = 'operations';
 
 
 		/**
@@ -88,6 +89,12 @@
 		 *
 		 */
 		private $namespace = NULL;
+
+
+		/**
+		 *
+		 */
+		private $outputFile = NULL;
 
 
 		/**
@@ -171,12 +178,15 @@
 		 */
 		static public function run($operation)
 		{
-			//
-			// Convert namespace separator to \
-			// - see if file exists in scaffolder_root/operations
-			// - if no, throw error (unknown operation)
-			// - if yes, run it
-			//
+			$operation_file = implode(DS, array(
+				self::$root,
+				self::OPERATION_ROOT,
+				str_replace('\\', '/', $operation) . '.php'
+			));
+
+			if (file_exists($operation_file)) {
+				include $operation_file;
+			}
 		}
 
 
@@ -185,11 +195,23 @@
 		 */
 		static private function scope($scope, Callable $tasks)
 		{
+			self::$instances  = array();
 			self::$buildScope = array_merge(self::$defaultScope, $scope);
 
 			if (call_user_func($tasks, self::$app)) {
-				foreach (self::$instances as $instance) {
-					$instance->write();
+
+				$files_written = array();
+
+				try {
+					foreach (self::$instances as $instance) {
+						$files_written[] = $instance->write();
+					}
+				} catch (Flourish\UnexpectedException $e) {
+					foreach ($files_written as $file) {
+						@unlink($file);
+					}
+
+					throw $e;
 				}
 			}
 
@@ -201,7 +223,7 @@
 		/**
 		 *
 		 */
-		static private function build($make_class, $target)
+		static private function build($class, $target, $data = array())
 		{
 			if (!self::$buildScope) {
 				throw new Flourish\ProgrammerException (
@@ -209,20 +231,28 @@
 				);
 			}
 
-			$make = [$make_class, IW::MAKE_METHOD];
+			$make_method  = [$class, IW::MAKE_METHOD];
+			$build_method = [$class, IW::BUILD_METHOD];
 
-			if (!is_callable($make)) {
+			if (!is_callable($make_method) || !is_callable($build_method)) {
 				throw new Flourish\ProgrammerException(
 					'Cannot build %s, scaffolding is not supported by %s',
 					$target,
-					$make_class
+					$class
 				);
 			}
 
 			$scaffolder = new self(self::$buildScope, $target);
 
-			if (call_user_func($make, $scaffolder)) {
-				self::$instances[] = $scaffolder;
+			if (call_user_func($make_method, $scaffolder, $data)) {
+				if (call_user_func($build_method, $scaffolder, $data)) {
+					self::$instances[] = $scaffolder;
+
+				} else {
+					//
+					// Generate notice that build failed
+					//
+				}
 
 			} else {
 				//
@@ -249,8 +279,9 @@
 				$this->namespace = $scope['vendor'] . '\\' . $this->namespace;
 			}
 
-			$this->scope  = array_merge(self::$defaultScope, $scope);
-			$this->target = $target;
+			$this->namespace = trim($this->namespace, '\\');
+			$this->scope     = array_merge(self::$defaultScope, $scope);
+			$this->target    = $target;
 		}
 
 
@@ -306,6 +337,15 @@
 		/**
 		 *
 		 */
+		public function getTarget()
+		{
+			return $this->target;
+		}
+
+
+		/**
+		 *
+		 */
 		public function make(Array $data = array())
 		{
 			$this->data     = $data;
@@ -317,10 +357,10 @@
 
 			if (strpos($this->template, '<?php') !== FALSE) {
 				$this->template = str_replace('<?php', self::OPEN_TOKEN, $this->template);
-				$this->template = preg_replace('#\%\>(\r\n|\n|\r)#', '%>$1$1', $this->template);
 			}
 
-			$this->code = call_user_func(function(){
+			$this->template = preg_replace('#\%\>(\r\n|\n|\r)#', '%>$1$1', $this->template);
+			$this->code     = call_user_func(function(){
 				ob_start();
 				eval('?>' . $this->template);
 				return str_replace(self::OPEN_TOKEN, '<?php', ob_get_clean());
@@ -344,6 +384,58 @@
 		/**
 		 *
 		 */
+		public function setOutputFile($output_file)
+		{
+			$this->outputFile = $output_file;
+
+			return $this;
+		}
+
+
+		/**
+		 *
+		 */
+		private function inject($tabs, $file, $keep_tags = FALSE)
+		{
+			$partial = @file_get_contents($file);
+
+			if (!$partial) {
+				return FALSE;
+			}
+
+			if (strpos($partial, '<?php') !== FALSE) {
+				if (!$keep_tags) {
+					if (preg_match('#^\<\?php(\s*)(.)#', $partial, $matches)) {
+						$partial = str_replace("\n" . ltrim($match[1], "\n"), "\n", $str);
+					}
+
+					$partial = trim(str_replace('<?php', '', $partial));
+				} else {
+					$partial = str_replace('<?php', self::OPEN_TOKEN, $partial);
+				}
+			}
+
+			$partial = preg_replace('#\%\>(\r\n|\n|\r)#', '%>$1$1', $partial);
+			$code    = call_user_func(function() use ($partial) {
+				ob_start();
+				eval('?>' . $partial);
+				return ob_get_clean();
+			});
+
+			$tabs = str_pad('', $tabs, "\t");
+			$code = $tabs . str_replace("\n", "\n" . $tabs, $code);
+
+			echo $keep_tags
+				? str_replace(self::OPEN_TOKEN, '<?php', $code)
+				: $code;
+
+			return TRUE;
+		}
+
+
+		/**
+		 *
+		 */
 		private function levy()
 		{
 			eval('?>' . $this->code);
@@ -355,7 +447,15 @@
 		 */
 		private function write()
 		{
+			if (!$this->outputFile) {
+				throw new Flourish\ProgrammerException(
+					'Could not write scaffolded code, not output file specified'
+				);
+			}
 
+			$file = new App\File($this->outputFile);
+
+			$file->write($this->code);
 		}
 	}
 }
