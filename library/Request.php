@@ -70,7 +70,11 @@
 		 * @access private
 		 * @var string
 		 */
-		private $files = array();
+		private $files = [
+			'name'     => array(),
+			'tmp_name' => array(),
+			'error'    => array()
+		];
 
 
 		/**
@@ -419,6 +423,12 @@
 					}
 				}
 
+				foreach (array_keys($_FILES) as $base) {
+					foreach (array_keys($this->files) as $property) {
+						$this->files[$property][$base] = $_FILES[$base][$property];
+					}
+				}
+
 			} else {
 				if (is_string($data)) {
 					parse_str($data, $this->data);
@@ -617,51 +627,60 @@
 		 */
 		public function get($key, $cast_to = NULL, $default = NULL, $default_on_blank = FALSE)
 		{
+			$value = $default;
 
-			$value       = $default;
-			$dereference = NULL;
+			if ($cast_to == 'file') {
+				try {
+					$name  = Flourish\Core::dereference($key, $this->files['name']);
+					$file  = Flourish\Core::dereference($key, $this->files['tmp_name']);
+					$error = Flourish\Core::dereference($key, $this->files['error']);
 
-			if (strpos($key, '[')) {
-				$bracket_pos       = strpos($key, '[');
-				$array_dereference = substr($key, $bracket_pos);
-				$key               = substr($key, 0, $bracket_pos);
-			}
-
-			if (isset($this->data[$key])) {
-				$value = $this->data[$key];
-			}
-
-			if ($value === '' && $default_on_blank && $default !== NULL) {
-				$value = $default;
-			}
-
-			if ($dereference) {
-				preg_match_all('#(?<=\[)[^\[\]]+(?=\])#', $dereference, $keys, PREG_SET_ORDER);
-
-				$keys = array_map('current', $keys);
-
-				foreach ($keys as $key) {
-					if (!is_array($value) || !isset($value[$key])) {
-						$value = $default;
-						break;
+					if (!$error) {
+						$value = new App\File($file);
+						$value->mask($name);
+					} else {
+						// UPLOAD_ERR_INI_SIZE: 1
+						// UPLOAD_ERR_FORM_SIZE: 2
+						// UPLOAD_ERR_NO_TMP_DIR: 6
+						// UPLOAD_ERR_CANT_WRITE: 7
+						// UPLOAD_ERR_EXTENSION: 8
+						// UPLOAD_ERR_PARTIAL: 3
 					}
 
-					$value = $value[$key];
+				} catch (Flourish\ProgrammerException $e) {
+					if ($default) {
+						$value = new App\File($default);
+					}
 				}
+
+			} else {
+				try {
+					$value = Flourish\Core::dereference($key, $this->data);
+
+					if ($value === '' && $default_on_blank && $default !== NULL) {
+						$value = $default;
+					}
+
+				} catch (Flourish\ProgrammerException $e) {
+					$value = $default;
+				}
+
+				//
+				// This allows for data_type? casts to allow NULL through
+				//
+
+				if ($cast_to !== NULL && substr($cast_to, -1) == '?') {
+					if ($value === NULL || $value === '') {
+						return NULL;
+					}
+
+					$cast_to = substr($cast_to, 0, -1);
+				}
+
+				$value = self::cast($value, $cast_to);
 			}
 
-			//
-			// This allows for data_type? casts to allow NULL through
-			//
-
-			if ($cast_to !== NULL && substr($cast_to, -1) == '?') {
-				if ($value === NULL || $value === '') {
-					return NULL;
-				}
-				$cast_to = substr($cast_to, 0, -1);
-			}
-
-			return self::cast($value, $cast_to);
+			return $value;
 		}
 
 
