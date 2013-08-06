@@ -4,6 +4,7 @@
 	use Dotink\Flourish;
 	use Dotink\Interfaces;
 	use Dotink\Traits;
+	use Dotink\Inkwell\HTTP;
 
 	/**
 	 * Routes class responsible for mapping request paths to logic.
@@ -525,7 +526,7 @@
 						break;
 
 					} elseif (preg_match('#^' . $pattern . '$#', $restless_uri)) {
-						$request->redirect($restless_uri, 301);
+						$request->redirect($restless_uri, HTTP\REDIRECT_PERMANENT);
 					}
 
 				} catch (Flourish\ContinueException $e) {

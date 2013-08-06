@@ -911,6 +911,7 @@
 						header('HTTP/1.0 302 Moved Temporarily');
 						break;
 				}
+
 			} elseif ($this->protocol == 'HTTP/1.1') {
 				switch ($type) {
 					case 301:

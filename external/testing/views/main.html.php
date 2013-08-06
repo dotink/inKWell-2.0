@@ -12,6 +12,9 @@
 
 			<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
+			<link rel="stylesheet" type="text/css" href="http://dotink.github.io/inKLing/inkling.css" />
+			<link rel="stylesheet" type="text/css" href="http://dotink.github.io/inKLing/theme.css" />
+
 			<% $this->head->place('common') %>
 
 		</head>
