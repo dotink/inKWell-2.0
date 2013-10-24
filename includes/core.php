@@ -275,6 +275,7 @@
 		public function addRoot($key, $root_directory)
 		{
 			$key            =  strtolower($key);
+			$original       =  $root_directory;
 			$root_directory =  str_replace('/', DS, rtrim($root_directory, '/\\' . DS));
 			$root_directory = !preg_match(REGEX\ABSOLUTE_PATH, $root_directory)
 				? realpath($this->getRoot() . DS . $root_directory)
@@ -283,7 +284,7 @@
 			if (!is_dir($root_directory)) {
 				throw new Flourish\ProgrammerException(
 					'Cannot set root directory "%s", directory does not exist',
-					$root_directory
+					$original
 				);
 			}
 
