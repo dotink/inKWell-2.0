@@ -641,7 +641,7 @@
 			$cache_key = md5($this->getRoot() . __CLASS__ . __FUNCTION__ . $class);
 
 			if (isset($this['cache']) && ($value = $this['cache']->get($cache_key))) {
-				include $include_file = $value;
+				@include $include_file = $value;
 
 			} else {
 
@@ -707,7 +707,7 @@
 						$include_file = $this->getRoot() . DS . $base_dir . DS . $class_path;
 
 						if (file_exists($include_file)) {
-							include_once $include_file;
+							@include_once $include_file;
 							break;
 						}
 
