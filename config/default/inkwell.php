@@ -86,6 +86,7 @@
 			'Date'      => 'Dotink\Flourish\Date',
 			'Directory' => 'Dotink\Flourish\Directory',
 			'File'      => 'Dotink\Flourish\File',
+			'JSON'      => 'Dotink\Flourish\JSON',
 			'Text'      => 'Dotink\Flourish\Text',
 			'Time'      => 'Dotink\Flourish\Time',
 			'Timestamp' => 'Dotink\Flourish\Timestamp',
