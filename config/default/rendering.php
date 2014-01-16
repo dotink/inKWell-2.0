@@ -27,7 +27,8 @@
 
 		'methods' => [
 			'Dotink\Inkwell\View'   => 'make',
-			'Dotink\Flourish\Image' => 'output'
+			'Dotink\Flourish\Image' => 'output',
+			'Dotink\Flourish\JSON'  => 'compose'
 		],
 
 	]);
