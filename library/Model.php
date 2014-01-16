@@ -7,6 +7,7 @@
 	use Dotink\Dub\ModelConfiguration;
 	use Doctrine\ORM\Mapping\ClassMetadata;
 	use Doctrine\ORM\Mapping\Builder\ClassMetadataBuilder;
+	use JSONSerializable;
 
 
 	/**
@@ -19,7 +20,7 @@
 	 *
 	 * @package Dotink\Inkwell
 	 */
-	class Model extends Dub\Model implements Interfaces\Inkwell
+	class Model extends Dub\Model implements Interfaces\Inkwell, JSONSerializable
 	{
 		/**
 		 * Avaiable application databases
@@ -385,6 +386,25 @@
 			self::callOn($database, 'check if state is removed', function($database) {
 				parent::isRemoved($database);
 			});
+		}
+
+
+		/**
+		 * Convert record to JSON
+		 *
+		 * @access public
+		 * @return array The data to be JSON serialized
+		 */
+		public function jsonSerialize()
+		{
+			$config = ModelConfiguration::load(get_class($this), 'load meta data');
+			$data   = array();
+
+			foreach ($config->getFields() as $field) {
+				$data[$config->getDataName($field)] = $this->$field;
+			}
+
+			return $data;
 		}
 
 
