@@ -263,8 +263,8 @@
 		static public function register($alias, $template, $root_directory)
 		{
 			self::$registeredViews[$alias] = [
-				'template' => $template,
-				'root'     => $root_directory
+				'file' => $template,
+				'root' => $root_directory
 			];
 		}
 
